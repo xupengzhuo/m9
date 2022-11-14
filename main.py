@@ -238,9 +238,8 @@ class m9:
 
         meta = {
             "project": project,
-            "project_dir": proj_abspath,
-            "template": os.path.basename(proj_relpath),
-            "template_dir": proj_relpath,
+            "project_dir": os.path.abspath(proj_abspath),
+            "template": os.path.basename(template_pth),
             "created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         }
 
@@ -273,8 +272,9 @@ class m9:
         for r in itertools.zip_longest(*col, fillvalue=""):
             print("\t".join(["{0: <24}".format(str(_r)) for _r in r]))
 
-    def show():
-        pass
+    def show(proj_abspath):
+        with open(os.path.join(proj_abspath, ".m9/meta.json")) as jfp:
+            print(json.dumps(json.load(jfp), indent=4))
 
 
 def parsecli(
@@ -324,23 +324,6 @@ def parsecli(
 
     m9_project_build = subparsers.add_parser("build", help="build with runtime", usage="m9 exe <project>|<path> <cmd> ...")
     m9_project_build.add_argument("runtime", help="runtime full name")
-    # m9_project_exe.add_argument("args", help="command args", action="append", nargs="+")
-    # m9_project_exe = subparsers.add_parser("exe", help="/* execute project self-contained cmooand */", usage="m9 exe <project>|<path> <cmd> ...")
-    # m9_project_exe.add_argument("project", help="project name or path")
-    # m9_project_exe.add_argument("args", help="command args", action="append", nargs="+")
-
-    # better help for "exe" cmd
-    # if IN_PROJECT:
-    #     log.warning("in a project folder, try to parse project cmd!!")
-    #     with open(PROJECT_CONFIG) as jfp:
-    #         commands = json.load(jfp).get("commands")
-
-    #     for cmd in commands:
-    #         print(cmd)
-    #         if hasattr(m9, cmd["name"]):
-    #             m9.args[cmd["name"]] = cmd["args"]
-    #         else:
-    #             m9_project_exe.add_argument(cmd["name"], help=cmd["desc"], nargs="*")
 
     args = parser.parse_args(args=cliargs)
     return args
@@ -439,6 +422,11 @@ def proc(args):
 
             m9.build(rtinfo["project_dir"], args.runtime, _cmd)
 
+        case "show":
+            if not (project_path := m9util.find_project(args.project)):
+                return log.error("project not found")
+
+            m9.show(project_path)
         case _:
             pass
 
