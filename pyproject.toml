@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+authors = [{ name = "xupengzhuo", email = "xupengzhuo@gmail.com" }]
+name = "m9"
+version = "0.0.1"
+description = ""
+requires-python = ">=3.10"
+dependencies = [""]
+license = { text = "MIT License" }
+
+[tool.black]
+line-length = 180

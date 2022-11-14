@@ -1,0 +1,37 @@
+{
+    "listeners": {
+        "*:M9_PLACEHOLDER_port": {
+            "pass": "routes",
+            "client_ip": {
+                "header": "X-Real-IP",
+                "source": [
+                    "0.0.0.0/0"
+                ]
+            }
+        }
+    },
+    "routes": [
+        {
+            "match": {
+                "uri": [
+                    "*"
+                ]
+            },
+            "action": {
+                "pass": "applications/app"
+            }
+        }
+    ],
+    "applications": {
+        "app": {
+            "type": "python 3.10",
+            "module": "asgi",
+            "path": "/usr/src/",
+            "callable": "app"
+        }
+    },
+    "access_log": {
+        "path": "/var/run/access.log",
+        "format": "$remote_addr - - [$time_local] $host $request_line $status $body_bytes_sent $header_referer $header_user_agent"
+    }
+}

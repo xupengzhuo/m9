@@ -1,0 +1,4 @@
+uwsgi:
+  module: wsgi
+  callable: app
+  http: 0.0.0.0:M9_PLACEHOLDER_port
