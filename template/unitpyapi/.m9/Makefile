@@ -1,6 +1,6 @@
 runtime_path = .m9/runtime/$(M9_RUNTIME)
 
-.PHONY : all init up down log re build
+.PHONY : all init up down log re build dist deploy
 
 all :
 	echo hola

@@ -276,6 +276,15 @@ class m9:
         with open(os.path.join(proj_abspath, ".m9/meta.json")) as jfp:
             print(json.dumps(json.load(jfp), indent=4))
 
+    def dist(proj_abspath, runtime, distway, args):
+        env = os.environ.copy()
+        env["M9_RUNTIME"] = runtime.split(".")[1]
+        env["M9_ARGS_distway"] = distway
+        subprocess.run(args=args, cwd=proj_abspath, env=env)
+
+    def deploy():
+        pass
+
 
 def parsecli(
     cliargs=None,
@@ -322,8 +331,17 @@ def parsecli(
     m9_log = subparsers.add_parser("re", help="restart full runtime", usage="m9 re <RUNTIME>")
     m9_log.add_argument("runtime", help="runtime full name")
 
-    m9_project_build = subparsers.add_parser("build", help="build with runtime", usage="m9 exe <project>|<path> <cmd> ...")
-    m9_project_build.add_argument("runtime", help="runtime full name")
+    m9_build = subparsers.add_parser("build", help="build with runtime", usage="m9 build <project>|<path> <cmd> ...")
+    m9_build.add_argument("runtime", help="runtime full name")
+
+    m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> -s|-b")
+    m9_dist.add_argument("runtime", help="runtime full name")
+    g = m9_dist.add_mutually_exclusive_group(required=True)
+    g.add_argument("-s", help="distribute with source", action="count")
+    g.add_argument("-b", help="distribute with binary", action="count")
+
+    m9_deploy = subparsers.add_parser("deploy", help="deploy runtime", usage="m9 deploy <runtime> ...")
+    m9_deploy.add_argument("runtime", help="runtime full name")
 
     args = parser.parse_args(args=cliargs)
     return args
@@ -427,6 +445,27 @@ def proc(args):
                 return log.error("project not found")
 
             m9.show(project_path)
+
+        case "dist":
+            if not (rtinfo := m9util.load_runtime_info(args.runtime)):
+                return log.error("runtime not found")
+
+            if not (_cmd := m9util.load_project_commad(rtinfo["project_dir"], "dist")):
+                return log.error("this project doesn`t supply dist command")
+
+            distway = None
+            if args.s:
+                distway = "source"
+            if args.b:
+                distway = "binary"
+            if not distway:
+                return log.error("missing distribute way")
+
+            m9.dist(rtinfo["project_dir"], args.runtime, distway, _cmd)
+
+        case "deploy":
+            pass
+
         case _:
             pass
 

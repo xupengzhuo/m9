@@ -1,6 +1,6 @@
 runtime_path = .m9/runtime/$(M9_RUNTIME)
 
-.PHONY : all init up down log re build
+.PHONY : all init up down log re build dist deploy
 
 all :
 	echo hola
@@ -88,3 +88,18 @@ build:
 	@podman run -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --module --include-module=wsgi wsgi;
 ################################################################################
 
+################################################################################
+dist:
+	@rm -rf ./dist && mkdir ./dist/;
+	@cp --parents .m9/meta.json .m9/Makefile .m9/project.json ./dist/;
+	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/;
+ifeq ($(M9_ARGS_distway), source)
+	@cp -r ./asgi ./dist/;
+endif
+ifeq ($(M9_ARGS_distway), binary)
+	@cp ./asgi.*.so ./dist/;
+endif
+	@cp --parents unit/config.json ./dist/;
+	@cp .env.dist ./dist/.env || cp .env ./dist/.env;
+
+################################################################################
