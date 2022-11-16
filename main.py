@@ -159,6 +159,14 @@ class m9util:
         except Exception as error:  # FIXME: add
             log.error(error)
 
+    def load_project_info(pth):
+        try:
+            with open(os.path.join(pth, ".m9/meta.json")) as jfp:
+                return json.load(jfp)
+
+        except Exception as error:  # FIXME: add
+            log.error(error)
+
 
 class m9:
     args = {}
@@ -282,8 +290,18 @@ class m9:
         env["M9_ARGS_distway"] = distway
         subprocess.run(args=args, cwd=proj_abspath, env=env)
 
-    def deploy():
-        pass
+    def deploy(project, runtime, pack_relpath, args):
+        print(project, runtime, pack_relpath, args)
+        if not m9util.find_project(project):
+            """1. do new project"""
+
+        if not m9util.find_runtime(runtime):
+            """2. do init runtime"""
+
+        """ 3. do deploy program"""
+
+        # env = os.environ.copy()
+        # subprocess.run(args=args, cwd=pack_relpath, env=env)
 
 
 def parsecli(
@@ -337,11 +355,11 @@ def parsecli(
     m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> -s|-b")
     m9_dist.add_argument("runtime", help="runtime full name")
     g = m9_dist.add_mutually_exclusive_group(required=True)
-    g.add_argument("-s", help="distribute with source", action="count")
-    g.add_argument("-b", help="distribute with binary", action="count")
+    g.add_argument("-s", help="distribute as source", action="count")
+    g.add_argument("-b", help="distribute as binary", action="count")
 
-    m9_deploy = subparsers.add_parser("deploy", help="deploy runtime", usage="m9 deploy <runtime> ...")
-    m9_deploy.add_argument("runtime", help="runtime full name")
+    m9_deploy = subparsers.add_parser("deploy", help="deploy distribution package", usage="m9 deploy <package> ...")
+    m9_deploy.add_argument("package", help="deploy distribution package")
 
     args = parser.parse_args(args=cliargs)
     return args
@@ -464,7 +482,21 @@ def proc(args):
             m9.dist(rtinfo["project_dir"], args.runtime, distway, _cmd)
 
         case "deploy":
-            pass
+
+            if not os.path.exists(args.package):
+                return log.error("distribution package not found")
+
+            if not (pinfo := m9util.load_project_info(args.package)):
+                return log.error("invalid package")
+
+            print("package info:")
+            [*map(print, pinfo.items())]
+
+            runtime = os.listdir(os.path.join(args.package, ".m9/runtime/"))[0]
+            if not (_cmd := m9util.load_project_commad(args.package, "deploy")):
+                return log.error("this project doesn`t supply deploy command")
+
+            m9.deploy(pinfo["project"], runtime, args.package, _cmd)
 
         case _:
             pass

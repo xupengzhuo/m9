@@ -91,3 +91,22 @@ build:
 	@podman run -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --module --include-module=asgi asgi;
 
 ################################################################################
+
+################################################################################
+dist:
+	@rm -rf ./dist && mkdir ./dist/;
+	@cp --parents .m9/meta.json .m9/Makefile .m9/project.json ./dist/;
+	@python -c "import json;c=open('./dist/.m9/meta.json'); \
+	r=json.load(c);c.close(); r['project_dir']=None;\
+	c=open('./dist/.m9/meta.json','w');c.write(json.dumps(r));c.close()";
+	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/;
+ifeq ($(M9_ARGS_distway), source)
+	@cp -r ./asgi/ ./dist/;
+endif
+ifeq ($(M9_ARGS_distway), binary)
+	@cp ./asgi.*.so ./dist/;
+endif
+	@cp --parents unit/config.json ./dist/;
+	@cp .env.dist ./dist/.env || (echo "[info] using '.env' fot distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
+
+################################################################################
