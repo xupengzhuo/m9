@@ -292,16 +292,29 @@ class m9:
 
     def deploy(project, runtime, pack_relpath, args):
         print(project, runtime, pack_relpath, args)
+
+        env = os.environ.copy()
+
         if not m9util.find_project(project):
-            """1. do new project"""
+            proj_abspath = os.path.abspath(os.path.join(CURRENT_PATH, pack_relpath))
+            plink = os.path.join(ABSPATH_PROJECT, project)
+            print(plink, 33333)
+            print(proj_abspath, "1111111")
 
-        if not m9util.find_runtime(runtime):
-            """2. do init runtime"""
+            with open(f"{pack_relpath}/.m9/meta.json", "r+") as jfp:
+                r = json.load(jfp)
+                r["project_dir"] = proj_abspath
+                jfp.seek(0)
+                jfp.truncate()
+                jfp.write(json.dumps(r))
+            os.symlink(f"{proj_abspath}/.m9/meta.json", plink)
 
-        """ 3. do deploy program"""
+        if not m9util.find_runtime(f"{project}.{runtime}"):
+            env["M9_ARGS_init_deploy"] = "true"
+            with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
+                json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": proj_abspath, "project": project}, jfp)
 
-        # env = os.environ.copy()
-        # subprocess.run(args=args, cwd=pack_relpath, env=env)
+        subprocess.run(args=args, cwd=pack_relpath, env=env)
 
 
 def parsecli(
