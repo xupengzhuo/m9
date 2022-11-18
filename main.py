@@ -291,7 +291,6 @@ class m9:
         subprocess.run(args=args, cwd=proj_abspath, env=env)
 
     def deploy(project, runtime, pack_relpath, args):
-        print(project, runtime, pack_relpath, args)
         env = os.environ.copy()
 
         if not (target_dir := m9util.find_project(project, trypath=False)):  # create project object here

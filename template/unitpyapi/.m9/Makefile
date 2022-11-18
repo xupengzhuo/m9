@@ -110,3 +110,10 @@ endif
 	@cp .env.dist ./dist/.env || (echo "[info] using '.env' fot distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
 
 ################################################################################
+
+################################################################################
+deploy:
+	echo $(M9_ARGS_targetdir)
+	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
+	@cp -rf ./* $(M9_ARGS_targetdir);
+################################################################################
