@@ -14,7 +14,7 @@ ifneq ($(and $(M9_RUNTIME),$(M9_BASEIMAGE),$(M9_PROJECT)),)
 	@cp ./requirements.txt $(runtime_path)/requirements.txt;
 	@echo "COPY ./requirements.txt /usr/etc/" >> $(runtime_path)/Dockerfile;
 	@echo "RUN pip3 install -r /usr/etc/requirements.txt" >> $(runtime_path)/Dockerfile;
-	@echo "CMD [\"uwsgi\", \"-y\", \"/usr/local/uwsgi.yaml\"]" >> $(runtime_path)/Dockerfile;
+	@echo "CMD [\"uwsgi\", \"-y\", \"/usr/src/uwsgi/config.yaml\"]" >> $(runtime_path)/Dockerfile;
 
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 
