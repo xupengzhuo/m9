@@ -22,7 +22,10 @@
 - compile project source code
 ```m9 build testm9proj.helloapi```
 
-- dist project runtime with binary
+- distribute project runtime with source code
+```m9 dist -s testm9proj.helloapi```
+
+- distribute project runtime with binary
 ```m9 dist -b testm9proj.helloapi```
 
 - deploy project runtime in another system
