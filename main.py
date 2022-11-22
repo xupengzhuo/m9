@@ -306,13 +306,13 @@ class m9:
                 jfp.write(json.dumps(r))
             os.symlink(f"{proj_abspath}/.m9/meta.json", plink)
             target_dir = proj_abspath
-            
+
+            if not m9util.find_runtime(f"{project}.{runtime}"): 
+                with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
+                    json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": target_dir, "project": project}, jfp)
         else:
             env["M9_ARGS_targetdir"] = target_dir  # path to deply code
 
-        if not m9util.find_runtime(f"{project}.{runtime}"): 
-            with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
-                json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": target_dir, "project": project}, jfp)
 
         env['M9_PROJECT'] = project
         env['M9_RUNTIME'] = runtime

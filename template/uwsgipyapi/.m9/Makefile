@@ -100,16 +100,20 @@ ifeq ($(M9_ARGS_distway), source)
 	@cp -r ./asgi/ ./dist/;
 endif
 ifeq ($(M9_ARGS_distway), binary)
-	@cp ./asgi.*.so ./dist/;
+	@cp ./wsgi.*.so ./dist/;
 endif
-	@cp --parents unit/config.json ./dist/;
+	@cp --parents uwsgi/config.json ./dist/;
 	@cp .env.dist ./dist/.env || (echo "[info] using '.env' fot distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
 
 ################################################################################
 
 ################################################################################
 deploy:
-	echo $(M9_ARGS_targetdir)
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
-	@cp -rf ./* $(M9_ARGS_targetdir);
+ifdef M9_ARGS_targetdir
+	@cp -rf  ./uwsgi/ $(M9_ARGS_targetdir);
+	@[ -e ./wsgi.*.so ] && cp -f ./wsgi.*.so $(M9_ARGS_targetdir);
+	@[ -e ./wsgi ] && cp -rf ./wsgi/ $(M9_ARGS_targetdir);
+	@cp -f ./.env $(M9_ARGS_targetdir);
+endif
 ################################################################################
