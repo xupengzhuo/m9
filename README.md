@@ -22,5 +22,11 @@
 - compile project source code
 ```m9 build testm9proj.helloapi```
 
+- dist project runtime with binary
+```m9 dist -b testm9proj.helloapi```
+
+- deploy project runtime in another system
+```m9 deploy <DISTRIBUTION FOLDER>```
+
 - print all m9 objects
 ```m9 list```
