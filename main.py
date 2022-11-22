@@ -118,13 +118,13 @@ class m9util:
 
         return os.path.join(rtpth, tn)
 
-    def find_project(p):
+    def find_project(p, trypath=True):
         try:
-            if os.path.exists(os.path.join(p, ".m9/meta.json")):
-                return os.path.abspath(p)
             if p in os.listdir(ABSPATH_PROJECT):
                 with open(os.path.join(ABSPATH_PROJECT, p)) as jfp:
                     return json.load(jfp)["project_dir"]
+            if trypath and os.path.exists(os.path.join(p, ".m9/meta.json")):
+                return os.path.abspath(p)
 
             return False
         except Exception as error:  # FIXME: add
@@ -154,6 +154,14 @@ class m9util:
     def load_runtime_info(rn):
         try:
             with open(os.path.join(ABSPATH_RUNTIME, f"{rn}.json")) as jfp:
+                return json.load(jfp)
+
+        except Exception as error:  # FIXME: add
+            log.error(error)
+
+    def load_project_info(pth):
+        try:
+            with open(os.path.join(pth, ".m9/meta.json")) as jfp:
                 return json.load(jfp)
 
         except Exception as error:  # FIXME: add
@@ -276,6 +284,40 @@ class m9:
         with open(os.path.join(proj_abspath, ".m9/meta.json")) as jfp:
             print(json.dumps(json.load(jfp), indent=4))
 
+    def dist(proj_abspath, runtime, distway, args):
+        env = os.environ.copy()
+        env["M9_RUNTIME"] = runtime.split(".")[1]
+        env["M9_ARGS_distway"] = distway
+        subprocess.run(args=args, cwd=proj_abspath, env=env)
+
+    def deploy(project, runtime, pack_relpath, args):
+        env = os.environ.copy()
+
+        if not (target_dir := m9util.find_project(project, trypath=False)):  # create project object here
+
+            proj_abspath = os.path.abspath(os.path.join(CURRENT_PATH, pack_relpath))
+            plink = os.path.join(ABSPATH_PROJECT, project)
+
+            with open(f"{pack_relpath}/.m9/meta.json", "r+") as jfp:
+                r = json.load(jfp)
+                r["project_dir"] = proj_abspath
+                jfp.seek(0)
+                jfp.truncate()
+                jfp.write(json.dumps(r))
+            os.symlink(f"{proj_abspath}/.m9/meta.json", plink)
+            target_dir = proj_abspath
+
+            if not m9util.find_runtime(f"{project}.{runtime}"): 
+                with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
+                    json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": target_dir, "project": project}, jfp)
+        else:
+            env["M9_ARGS_targetdir"] = target_dir  # path to deply code
+
+
+        env['M9_PROJECT'] = project
+        env['M9_RUNTIME'] = runtime
+        subprocess.run(args=args, cwd=pack_relpath, env=env)
+
 
 def parsecli(
     cliargs=None,
@@ -322,8 +364,17 @@ def parsecli(
     m9_log = subparsers.add_parser("re", help="restart full runtime", usage="m9 re <RUNTIME>")
     m9_log.add_argument("runtime", help="runtime full name")
 
-    m9_project_build = subparsers.add_parser("build", help="build with runtime", usage="m9 exe <project>|<path> <cmd> ...")
-    m9_project_build.add_argument("runtime", help="runtime full name")
+    m9_build = subparsers.add_parser("build", help="build with runtime", usage="m9 build <project>|<path> <cmd> ...")
+    m9_build.add_argument("runtime", help="runtime full name")
+
+    m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> -s|-b")
+    m9_dist.add_argument("runtime", help="runtime full name")
+    g = m9_dist.add_mutually_exclusive_group(required=True)
+    g.add_argument("-s", help="distribute as source", action="count")
+    g.add_argument("-b", help="distribute as binary", action="count")
+
+    m9_deploy = subparsers.add_parser("deploy", help="deploy distribution package", usage="m9 deploy <package> ...")
+    m9_deploy.add_argument("package", help="deploy distribution package")
 
     args = parser.parse_args(args=cliargs)
     return args
@@ -427,6 +478,41 @@ def proc(args):
                 return log.error("project not found")
 
             m9.show(project_path)
+
+        case "dist":
+            if not (rtinfo := m9util.load_runtime_info(args.runtime)):
+                return log.error("runtime not found")
+
+            if not (_cmd := m9util.load_project_commad(rtinfo["project_dir"], "dist")):
+                return log.error("this project doesn`t supply dist command")
+
+            distway = None
+            if args.s:
+                distway = "source"
+            if args.b:
+                distway = "binary"
+            if not distway:
+                return log.error("missing distribute way")
+
+            m9.dist(rtinfo["project_dir"], args.runtime, distway, _cmd)
+
+        case "deploy":
+
+            if not os.path.exists(args.package):
+                return log.error("distribution package not found")
+
+            if not (pinfo := m9util.load_project_info(args.package)):
+                return log.error("invalid package")
+
+            print("package info:")
+            [*map(print, pinfo.items())]
+
+            runtime = os.listdir(os.path.join(args.package, ".m9/runtime/"))[0]
+            if not (_cmd := m9util.load_project_commad(args.package, "deploy")):
+                return log.error("this project doesn`t supply deploy command")
+
+            m9.deploy(pinfo["project"], runtime, args.package, _cmd)
+
         case _:
             pass
 

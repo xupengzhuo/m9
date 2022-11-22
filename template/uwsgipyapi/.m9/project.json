@@ -60,6 +60,26 @@
                 ".m9/Makefile"
             ],
             "desc": "build"
+        },
+        {
+            "name": "dist",
+            "args": [
+                "make",
+                "dist",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "dist"
+        },
+        {
+            "name": "deploy",
+            "args": [
+                "make",
+                "deploy",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "deploy"
         }
     ]
 }

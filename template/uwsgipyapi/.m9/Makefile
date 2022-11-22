@@ -1,6 +1,6 @@
 runtime_path = .m9/runtime/$(M9_RUNTIME)
 
-.PHONY : all init up down log re build
+.PHONY : all init up down log re build dist deploy
 
 all :
 	echo hola
@@ -14,7 +14,7 @@ ifneq ($(and $(M9_RUNTIME),$(M9_BASEIMAGE),$(M9_PROJECT)),)
 	@cp ./requirements.txt $(runtime_path)/requirements.txt;
 	@echo "COPY ./requirements.txt /usr/etc/" >> $(runtime_path)/Dockerfile;
 	@echo "RUN pip3 install -r /usr/etc/requirements.txt" >> $(runtime_path)/Dockerfile;
-	@echo "CMD [\"uwsgi\", \"-y\", \"/usr/local/uwsgi.yaml\"]" >> $(runtime_path)/Dockerfile;
+	@echo "CMD [\"uwsgi\", \"-y\", \"/usr/src/uwsgi/config.yaml\"]" >> $(runtime_path)/Dockerfile;
 
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 
@@ -88,3 +88,32 @@ build:
 	@podman run -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --module --include-module=wsgi wsgi;
 ################################################################################
 
+################################################################################
+dist:
+	@rm -rf ./dist && mkdir ./dist/;
+	@cp --parents .m9/meta.json .m9/Makefile .m9/project.json ./dist/;
+	@python -c "import json;c=open('./dist/.m9/meta.json'); \
+	r=json.load(c);c.close(); r['project_dir']=None;\
+	c=open('./dist/.m9/meta.json','w');c.write(json.dumps(r));c.close()";
+	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/;
+ifeq ($(M9_ARGS_distway), source)
+	@cp -r ./wsgi/ ./dist/;
+endif
+ifeq ($(M9_ARGS_distway), binary)
+	@cp ./wsgi.*.so ./dist/;
+endif
+	@cp --parents uwsgi/config.yaml ./dist/;
+	@cp .env.dist ./dist/.env || (echo "[info] using '.env' for distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
+
+################################################################################
+
+################################################################################
+deploy:
+	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
+ifdef M9_ARGS_targetdir
+	@cp -rf  ./uwsgi/ $(M9_ARGS_targetdir);
+	@[ -e ./wsgi.*.so ] && cp -f ./wsgi.*.so $(M9_ARGS_targetdir)||:;
+	@[ -e ./wsgi ] && cp -rf ./wsgi/ $(M9_ARGS_targetdir)||:;
+	@cp -f ./.env $(M9_ARGS_targetdir);
+endif
+################################################################################
