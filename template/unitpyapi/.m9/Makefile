@@ -116,8 +116,8 @@ deploy:
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 ifdef M9_ARGS_targetdir
 	@cp -rf  ./unit/ $(M9_ARGS_targetdir);
-	@[ -e ./asgi.*.so ] && cp -f ./asgi.*.so $(M9_ARGS_targetdir);
-	@[ -e ./asgi ] && cp -rf ./asgi $(M9_ARGS_targetdir);
+	@[ -e ./asgi.*.so ] && cp -f ./asgi.*.so $(M9_ARGS_targetdir)||:;
+	@[ -e ./asgi ] && cp -rf ./asgi $(M9_ARGS_targetdir)||:;
 	@cp -f ./.env $(M9_ARGS_targetdir);
 endif
 ################################################################################

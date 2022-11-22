@@ -97,13 +97,13 @@ dist:
 	c=open('./dist/.m9/meta.json','w');c.write(json.dumps(r));c.close()";
 	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/;
 ifeq ($(M9_ARGS_distway), source)
-	@cp -r ./asgi/ ./dist/;
+	@cp -r ./wsgi/ ./dist/;
 endif
 ifeq ($(M9_ARGS_distway), binary)
 	@cp ./wsgi.*.so ./dist/;
 endif
-	@cp --parents uwsgi/config.json ./dist/;
-	@cp .env.dist ./dist/.env || (echo "[info] using '.env' fot distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
+	@cp --parents uwsgi/config.yaml ./dist/;
+	@cp .env.dist ./dist/.env || (echo "[info] using '.env' for distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
 
 ################################################################################
 
@@ -112,8 +112,8 @@ deploy:
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 ifdef M9_ARGS_targetdir
 	@cp -rf  ./uwsgi/ $(M9_ARGS_targetdir);
-	@[ -e ./wsgi.*.so ] && cp -f ./wsgi.*.so $(M9_ARGS_targetdir);
-	@[ -e ./wsgi ] && cp -rf ./wsgi/ $(M9_ARGS_targetdir);
+	@[ -e ./wsgi.*.so ] && cp -f ./wsgi.*.so $(M9_ARGS_targetdir)||:;
+	@[ -e ./wsgi ] && cp -rf ./wsgi/ $(M9_ARGS_targetdir)||:;
 	@cp -f ./.env $(M9_ARGS_targetdir);
 endif
 ################################################################################
