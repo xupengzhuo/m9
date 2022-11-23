@@ -1,0 +1,85 @@
+{
+    "baseimage": "python310",
+    "commands": [
+        {
+            "name": "init",
+            "args": [
+                "make",
+                "init",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "initialize project runtime"
+        },
+        {
+            "name": "up",
+            "args": [
+                "make",
+                "up",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "up"
+        },
+        {
+            "name": "down",
+            "args": [
+                "make",
+                "down",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "down"
+        },
+        {
+            "name": "re",
+            "args": [
+                "make",
+                "re",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "restart"
+        },
+        {
+            "name": "log",
+            "args": [
+                "make",
+                "log",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "log"
+        },
+        {
+            "name": "build",
+            "args": [
+                "make",
+                "build",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "build"
+        },
+        {
+            "name": "dist",
+            "args": [
+                "make",
+                "dist",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "dist"
+        },
+        {
+            "name": "deploy",
+            "args": [
+                "make",
+                "deploy",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "deploy"
+        }
+    ]
+}
