@@ -227,7 +227,7 @@ class m9:
             return
 
         if os.path.exists(proj_abspath):
-            pm9_abspath = os.path.join(proj_abspath, ".m9")
+            pm9_abspath = os.path.join(proj_abspath, ".m9", "meta.json")
             if os.path.exists(pm9_abspath):
                 log.error("project already exists here! ")
                 return
@@ -307,15 +307,14 @@ class m9:
             os.symlink(f"{proj_abspath}/.m9/meta.json", plink)
             target_dir = proj_abspath
 
-            if not m9util.find_runtime(f"{project}.{runtime}"): 
+            if not m9util.find_runtime(f"{project}.{runtime}"):
                 with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
                     json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": target_dir, "project": project}, jfp)
         else:
             env["M9_ARGS_targetdir"] = target_dir  # path to deply code
 
-
-        env['M9_PROJECT'] = project
-        env['M9_RUNTIME'] = runtime
+        env["M9_PROJECT"] = project
+        env["M9_RUNTIME"] = runtime
         subprocess.run(args=args, cwd=pack_relpath, env=env)
 
 
