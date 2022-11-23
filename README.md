@@ -1,7 +1,7 @@
 # m9
 ### Installation
 
-```git pull https://github.com/xupengzhuo/m9.git <YOUR PATH> ```
+```git clone https://github.com/xupengzhuo/m9.git <YOUR PATH> ```
 
 ```chmod +x <YOUR PATH>/main.py && ln -s <YOUR PATH>/main.py /usr/local/bin/m9 ```
 
