@@ -6,12 +6,17 @@ all :
 	echo hola
 
 ################################################################################
+define ENTRYPOINT
+#!/bin/bash\nset -e\nif [ -e ./start.bin ]; then\n  exec ./start.bin\nelif [ -e ./start.py ]; then\n  exec python start.py\nfi\nexec "$@"
+endef
+
+export ENTRYPOINT
 init:
 ifneq ($(and $(M9_RUNTIME),$(M9_BASEIMAGE),$(M9_PROJECT)),)
 	@mkdir -p $(runtime_path); 
 	@cp  ${M9_BASEIMAGE}/* $(runtime_path);
+	@echo -e $$ENTRYPOINT > $(runtime_path)/entrypoint.sh && chmod +x $(runtime_path)/entrypoint.sh;
 	@cp ./requirements.txt $(runtime_path)/requirements.txt;
-	@cp -a ./entrypoint.sh $(runtime_path)/entrypoint.sh;
 	@echo "COPY ./requirements.txt /usr/etc/" >> $(runtime_path)/Dockerfile;
 	@echo "COPY ./entrypoint.sh /" >> $(runtime_path)/Dockerfile;
 	@echo "RUN pip3 install -r /usr/etc/requirements.txt" >> $(runtime_path)/Dockerfile;
@@ -78,12 +83,14 @@ ifdef M9_RUNTIME_FULLNAME
 	podman restart $(M9_RUNTIME_FULLNAME)
 endif
 ################################################################################
+
+################################################################################
 build:
 	@mkdir -p ./build/;
 	@cp -r $(runtime_path) ./build/;
-	@echo -e "\nnuitka" >> ./build/$(M9_RUNTIME)/requirements.txt;
+	@echo -e "\nnuitka\nordered-set" >> ./build/$(M9_RUNTIME)/requirements.txt;
 	@podman build ./build/$(M9_RUNTIME) -t $(M9_PROJECT).$(M9_RUNTIME)_build ;
-	@podman run -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --follow-imports start.py;
+	@podman run --rm --entrypoint python3 -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build -m nuitka --follow-imports start.py;
 ################################################################################
 
 ################################################################################
@@ -101,14 +108,16 @@ ifeq ($(M9_ARGS_distway), binary)
 	@cp start.bin ./dist/;
 endif
 	@cp .env.dist ./dist/.env || (echo "[info] using '.env' for distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
-
 ################################################################################
 
 ################################################################################
 deploy:
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 ifdef M9_ARGS_targetdir
-	@cp -f start.py $(M9_ARGS_targetdir);
-	@cp -f .env $(M9_ARGS_targetdir);
+	@[ -e ./start.py ] && cp -vf ./start.py $(M9_ARGS_targetdir)||:;
+	@[ -e ./start.bin ] && cp -vf ./start.bin $(M9_ARGS_targetdir)||:;
+	@cp -vf .env $(M9_ARGS_targetdir);
+	@cp -vf --parents .m9/Makefile .m9/project.json $(M9_ARGS_targetdir);
+	@cp -Trvf $(runtime_path) $(M9_ARGS_targetdir)/$(runtime_path);
 endif
 ################################################################################

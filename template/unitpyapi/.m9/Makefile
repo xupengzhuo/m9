@@ -86,10 +86,9 @@ endif
 build:
 	@mkdir -p ./build/;
 	@cp -r $(runtime_path) ./build/;
-	@echo -e "\nnuitka" >> ./build/$(M9_RUNTIME)/requirements.txt;
+	@echo -e "\nnuitka\nordered-set" >> ./build/$(M9_RUNTIME)/requirements.txt;
 	@podman build ./build/$(M9_RUNTIME) -t $(M9_PROJECT).$(M9_RUNTIME)_build ;
-	@podman run -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --module --include-module=asgi asgi;
-
+	@podman run --rm -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --module --include-module=asgi asgi;
 ################################################################################
 
 ################################################################################
@@ -108,16 +107,17 @@ ifeq ($(M9_ARGS_distway), binary)
 endif
 	@cp --parents unit/config.json ./dist/;
 	@cp .env.dist ./dist/.env || (echo "[info] using '.env' fot distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
-
 ################################################################################
 
 ################################################################################
 deploy:
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 ifdef M9_ARGS_targetdir
-	@cp -rf  ./unit/ $(M9_ARGS_targetdir);
-	@[ -e ./asgi.*.so ] && cp -f ./asgi.*.so $(M9_ARGS_targetdir)||:;
-	@[ -e ./asgi ] && cp -rf ./asgi $(M9_ARGS_targetdir)||:;
-	@cp -f ./.env $(M9_ARGS_targetdir);
+	@cp -vrf  ./unit/ $(M9_ARGS_targetdir);
+	@[ -e ./asgi.*.so ] && cp -vf ./asgi.*.so $(M9_ARGS_targetdir)||:;
+	@[ -e ./asgi ] && cp -vrf ./asgi $(M9_ARGS_targetdir)||:;
+	@cp -vf ./.env $(M9_ARGS_targetdir);
+	@cp -vf --parents .m9/Makefile .m9/project.json $(M9_ARGS_targetdir);
+	@cp -Trvf $(runtime_path) $(M9_ARGS_targetdir)/$(runtime_path);
 endif
 ################################################################################

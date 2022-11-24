@@ -80,12 +80,14 @@ ifdef M9_RUNTIME_FULLNAME
 	podman restart $(M9_RUNTIME_FULLNAME)
 endif
 ################################################################################
+
+################################################################################
 build:
 	@mkdir -p ./build/;
 	@cp -r $(runtime_path) ./build/;
-	@echo -e "\nnuitka" >> ./build/$(M9_RUNTIME)/requirements.txt;
+	@echo -e "\nnuitka\nordered-set" >> ./build/$(M9_RUNTIME)/requirements.txt;
 	@podman build ./build/$(M9_RUNTIME) -t $(M9_PROJECT).$(M9_RUNTIME)_build ;
-	@podman run -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --module --include-module=wsgi wsgi;
+	@podman run --rm -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --module --include-module=wsgi wsgi;
 ################################################################################
 
 ################################################################################
@@ -104,16 +106,17 @@ ifeq ($(M9_ARGS_distway), binary)
 endif
 	@cp --parents uwsgi/config.yaml ./dist/;
 	@cp .env.dist ./dist/.env || (echo "[info] using '.env' for distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
-
 ################################################################################
 
 ################################################################################
 deploy:
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 ifdef M9_ARGS_targetdir
-	@cp -rf  ./uwsgi/ $(M9_ARGS_targetdir);
-	@[ -e ./wsgi.*.so ] && cp -f ./wsgi.*.so $(M9_ARGS_targetdir)||:;
-	@[ -e ./wsgi ] && cp -rf ./wsgi/ $(M9_ARGS_targetdir)||:;
-	@cp -f ./.env $(M9_ARGS_targetdir);
+	@cp -vrf  ./uwsgi/ $(M9_ARGS_targetdir);
+	@[ -e ./wsgi.*.so ] && cp -vf ./wsgi.*.so $(M9_ARGS_targetdir)||:;
+	@[ -e ./wsgi ] && cp -vrf ./wsgi/ $(M9_ARGS_targetdir)||:;
+	@cp -vf ./.env $(M9_ARGS_targetdir);
+	@cp -vf --parents .m9/Makefile .m9/project.json $(M9_ARGS_targetdir);
+	@cp -Trvf $(runtime_path) $(M9_ARGS_targetdir)/$(runtime_path);
 endif
 ################################################################################
