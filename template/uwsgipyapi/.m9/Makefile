@@ -46,7 +46,6 @@ endif
 
 up:
 ifdef M9_RUNTIME_FULLNAME
-	@mkdir -p ./uwsgi/;
 	podman run $(up_mode) $(daemon) $(net_mode) --env-file .env \
 	-v ./:/usr/src/:Z \
 	-v /etc/localtime:/etc/localtime \

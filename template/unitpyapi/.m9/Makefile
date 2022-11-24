@@ -45,7 +45,6 @@ endif
 
 up:
 ifdef M9_RUNTIME_FULLNAME
-	@mkdir -p ./unit/;
 	podman run $(up_mode) $(daemon) $(net_mode) --env-file .env \
 	-v ./:/usr/src/:Z \
 	-v ./unit/:/var/run/:Z \
