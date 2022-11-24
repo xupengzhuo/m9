@@ -47,12 +47,10 @@ net_mode = --network host
 endif
 
 up:
-	@[ -e /var/lib/sqlite3 ] || mkdir /var/lib/sqlite3;
 ifdef M9_RUNTIME_FULLNAME
 	podman run $(up_mode) $(daemon) $(net_mode) --env-file .env \
 	-v ./:/usr/src/:Z \
 	-v /etc/localtime:/etc/localtime \
-	-v /var/lib/sqlite3/:/usr/src/data/:Z \
 	--name=$(M9_RUNTIME_FULLNAME) $(M9_RUNTIME_FULLNAME);
 endif
 ################################################################################
