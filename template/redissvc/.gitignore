@@ -1,0 +1,10 @@
+# C extensions
+*.so
+*.log
+
+
+# Environments
+.env
+
+.m9/meta.json
+.m9/runtime
