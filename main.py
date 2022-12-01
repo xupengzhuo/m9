@@ -14,6 +14,7 @@ import json
 import datetime
 import itertools
 import subprocess
+import textwrap
 
 __version__ = "0.0.1"
 
@@ -318,6 +319,95 @@ class m9:
         subprocess.run(args=args, cwd=pack_relpath, env=env)
 
 
+class m9sd:
+    tpl_unit_file = textwrap.dedent(
+        """\
+    [Unit]
+    Description=
+
+    [Service]
+    Type=exec
+    ExecStartPre=m9 down {rt}
+    ExecStart=m9 up {rt}
+    ExecStop=m9 down {rt}
+    Restart=always
+    RestartSec=0.9
+
+    [Install]
+    WantedBy=multi-user.target"""
+    )
+    SYSTEMD_UNIT_PATH = "/run/systemd/system/"
+
+    def __init__(self, action, runtimes):
+        self.services = {f"{rt}.service": rt for rt in runtimes}
+
+        all_installed_services = set(os.listdir(self.SYSTEMD_UNIT_PATH))
+
+        self.uninstalled_m9_services = set(self.services.keys()) - all_installed_services
+        self.installed_m9_services = set.intersection(all_installed_services, set(self.services.keys()))
+
+        self.systemd(action)
+
+    def systemd(self, action):
+        getattr(self, "sd" + action)()
+
+    def sdstatus(self):
+        if not self.installed_m9_services:
+            print("not services installed")
+            return
+        svcs = list(self.installed_m9_services)
+        svcs.sort()
+        data = [[self.services.get(r) for r in svcs]]
+        for a in ["is-active", "is-enabled", "is-failed"]:
+            r = subprocess.run(f"systemctl {a} {' '.join(svcs)}", shell=True, capture_output=True)
+            data.append(r.stdout.decode().strip().split("\n"))
+
+        print("\t".join(["{0: <24}".format(str(_r)) for _r in ["SERVICE", "IS-ACTIVE", "IS-ENABLED", "IS-FAILED"]]))
+        for r in itertools.zip_longest(*data):
+            print("\t".join(["{0: <24}".format(str(_r)) for _r in r]))
+
+    def sdinstall(self):
+        for sv in self.uninstalled_m9_services:
+            with open(self.SYSTEMD_UNIT_PATH + sv, "w") as fp:
+                fp.write(self.tpl_unit_file.format(rt=self.services[sv]))
+
+        os.system(f"systemctl enable {' '.join(self.services)}")
+        os.system("systemctl daemon-reload")
+
+        if self.installed_m9_services:
+            print(f"services already installed:\n{' '.join(self.installed_m9_services)}")
+
+    def sduninstall(self):
+        for sv in self.installed_m9_services:
+            os.remove(os.path.join(self.SYSTEMD_UNIT_PATH, sv))
+
+        os.system(f"systemctl stop {' '.join(self.installed_m9_services)}")
+        os.system(f"systemctl disable {' '.join(self.installed_m9_services)}")
+        os.system("systemctl daemon-reload")
+        if self.uninstalled_m9_services:
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
+
+    def sdstart(self):
+        os.system(f"systemctl start {' '.join(self.installed_m9_services)}")
+        if self.uninstalled_m9_services:
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_services)}")
+
+    def sdstop(self):
+        os.system(f"systemctl stop {' '.join(self.installed_m9_services)}")
+        if self.uninstalled_m9_services:
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
+
+    def sdenable(self):
+        os.system(f"systemctl enable {' '.join(self.installed_m9_services)}")
+        if self.uninstalled_m9_services:
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_services)}")
+
+    def sddisable(self):
+        os.system(f"systemctl disable {' '.join(self.installed_m9_services)}")
+        if self.uninstalled_m9_services:
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
+
+
 def parsecli(
     cliargs=None,
 ) -> argparse.Namespace:
@@ -365,6 +455,10 @@ def parsecli(
 
     m9_build = subparsers.add_parser("build", help="build with runtime", usage="m9 build <project>|<path> <cmd> ...")
     m9_build.add_argument("runtime", help="runtime full name")
+
+    m9_systemd = subparsers.add_parser("sd", help="systemd command sets", usage="m9 sd install|uninstall|enable|disable|start|stop|status <runtime>")
+    m9_systemd.add_argument("action", choices=["install", "uninstall", "enable", "disable", "start", "stop", "status"])
+    m9_systemd.add_argument("runtime", nargs="+", help="runtime full name (`all` for every runtime)")
 
     m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> -s|-b")
     m9_dist.add_argument("runtime", help="runtime full name")
@@ -496,7 +590,6 @@ def proc(args):
             m9.dist(rtinfo["project_dir"], args.runtime, distway, _cmd)
 
         case "deploy":
-
             if not os.path.exists(args.package):
                 return log.error("distribution package not found")
 
@@ -511,6 +604,17 @@ def proc(args):
                 return log.error("this project doesn`t supply deploy command")
 
             m9.deploy(pinfo["project"], runtime, args.package, _cmd)
+
+        case "sd":
+            all_runtime = [r.rsplit(".", 1)[0] for r in os.listdir(ABSPATH_RUNTIME)]
+            if "all" in args.runtime:
+                rts = all_runtime
+            else:
+                if wrts := set(args.runtime) - set(all_runtime):
+                    return log.error(f"runtime not found: [{', '.join(wrts)}]")
+                rts = args.runtime
+
+            m9sd(args.action, rts)
 
         case _:
             pass
@@ -529,6 +633,7 @@ def main(cliargs=None) -> int:
     # List possible exceptions here and return error codes
     except Exception as error:  # FIXME: add a more specific exception here!
         log.fatal(error)
+        raise
         # Use whatever return code is appropriate for your specific exception
         return 10
 
