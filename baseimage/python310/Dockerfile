@@ -2,9 +2,9 @@ FROM python:3.10
 
 WORKDIR /usr/src/
 
-COPY ./sources.list ./pip.conf /usr/etc/
+COPY ./sources.list ./pip.conf /etc
 
-RUN cat /usr/etc/sources.list > /etc/apt/sources.list               \
+RUN cat /etc/sources.list > /etc/apt/sources.list                   \
     && apt update && apt install -y python3-pip                     \
     && apt remove -y python3-pip                                    \
     && apt autoremove --purge -y                                    \
