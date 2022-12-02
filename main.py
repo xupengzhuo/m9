@@ -95,6 +95,14 @@ class m9util:
                         os.remove(os.path.join(ABSPATH_RUNTIME, r))
                 log.warning(f"remove invalid project: {pn}")
 
+        for rn in os.listdir(ABSPATH_RUNTIME):
+            rf = os.path.join(ABSPATH_RUNTIME, rn)
+            with open(rf) as f:
+                rtmeta = json.load(f)
+            if not os.path.exists(rtmeta['project_dir']):
+                os.remove(rf)
+            log.warning(f"remove invalid runtime: {rn}")
+
     def init_m9path():
         if not os.path.exists(M9PATH):
             os.makedirs(ABSPATH_PROJECT)
