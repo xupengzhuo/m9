@@ -178,7 +178,7 @@ class m9:
         subprocess.run(args=args, cwd=project_abspath, env=env)
 
     def init(runtime, baseimage_abspath, project_abspath, project, args):
-        env = dict(os.environ.copy(), **{"M9_BASEIMAGE": baseimage_abspath, "M9_RUNTIME": runtime, "M9_PROJECT": project})
+        env = dict(os.environ.copy(), **{"M9_BASEIMAGE": baseimage_abspath or "", "M9_RUNTIME": runtime, "M9_PROJECT": project})
         subprocess.run(args=args, cwd=project_abspath, env=env)
         with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
             json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": project_abspath, "project": project}, jfp)
@@ -358,11 +358,11 @@ class m9sd:
         svcs = list(self.installed_m9_services)
         svcs.sort()
         data = [[self.services.get(r) for r in svcs]]
-        for a in ["is-active", "is-enabled", "is-failed"]:
+        for a in ["is-active", "is-enabled",]:
             r = subprocess.run(f"systemctl {a} {' '.join(svcs)}", shell=True, capture_output=True)
             data.append(r.stdout.decode().strip().split("\n"))
 
-        print("\t".join(["{0: <24}".format(str(_r)) for _r in ["SERVICE", "IS-ACTIVE", "IS-ENABLED", "IS-FAILED"]]))
+        print("\t".join(["{0: <24}".format(str(_r)) for _r in ["SERVICE", "IS-ACTIVE", "IS-ENABLED",]]))
         for r in itertools.zip_longest(*data):
             print("\t".join(["{0: <24}".format(str(_r)) for _r in r]))
 
@@ -484,11 +484,11 @@ def proc(args):
                 "r",  # runtime
             }
             if not args.type:
-                m9.list(["p", "t", "r"])
+                m9.list(["p", "r", "t"])
                 return
             _args = set(args.type.lower())
             if _args.issubset(m9type):
-                m9.list(sorted(list(_args)))
+                m9.list(list(_args))
             else:
                 log.error("check your input of type")
 
@@ -517,7 +517,9 @@ def proc(args):
             if not (_cmd := m9util.load_project_commad(project_path, "init")):
                 return log.error("this project doesn`t supply init command")
 
-            if not (baseimage_path := m9util.find_template(m9util.load_project_baseimage(project_path), RELPATH_BASEIMAGE)):
+            base_image = m9util.load_project_baseimage(project_path)
+            baseimage_path = None
+            if base_image and not (baseimage_path := m9util.find_template(base_image, RELPATH_BASEIMAGE)):
                 return log.error(f"failed to find baseimage: {project_path}")
             m9.init(args.runtime, baseimage_path, project_path, os.path.basename(project_path), _cmd)
 
