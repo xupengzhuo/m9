@@ -101,7 +101,7 @@ class m9util:
                 rtmeta = json.load(f)
             if not os.path.exists(rtmeta['project_dir']):
                 os.remove(rf)
-            log.warning(f"remove invalid runtime: {rn}")
+                log.warning(f"remove invalid runtime: {rn}")
 
     def init_m9path():
         if not os.path.exists(M9PATH):
