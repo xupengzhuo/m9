@@ -278,13 +278,13 @@ class m9:
             match _t:
                 case "p":
                     _r.extend(["PROJECT"])
-                    _r.extend(os.listdir(ABSPATH_PROJECT))
+                    _r.extend(sorted(os.listdir(ABSPATH_PROJECT)))
                 case "t":
                     _r.extend(["TEMPLATE"])
-                    _r.extend(os.listdir(get_tpl_path(RELPATH_TPL_PROJ)))
+                    _r.extend(sorted(os.listdir(get_tpl_path(RELPATH_TPL_PROJ))))
                 case "r":
                     _r.extend(["RUNTIME"])
-                    _r.extend(r.rsplit(".", 1)[0] for r in os.listdir(ABSPATH_RUNTIME))  # remove .json extension
+                    _r.extend(sorted(r.rsplit(".", 1)[0] for r in os.listdir(ABSPATH_RUNTIME)))  # remove .json extension
             col.append(_r)
         for r in itertools.zip_longest(*col, fillvalue=""):
             print("\t".join(["{0: <24}".format(str(_r)) for _r in r]))
