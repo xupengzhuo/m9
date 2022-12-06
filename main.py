@@ -335,7 +335,6 @@ class m9sd:
 
     [Service]
     Type=exec
-    ExecStartPre=m9 down {rt}
     ExecStart=m9 up {rt}
     ExecStop=m9 down {rt}
     Restart=always
@@ -344,7 +343,7 @@ class m9sd:
     [Install]
     WantedBy=multi-user.target"""
     )
-    SYSTEMD_UNIT_PATH = "/run/systemd/system/"
+    SYSTEMD_UNIT_PATH = "/etc/systemd/system/"
 
     def __init__(self, action, runtimes):
         self.services = {f"{rt}.service": rt for rt in runtimes}
