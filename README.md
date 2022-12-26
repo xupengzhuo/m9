@@ -34,7 +34,7 @@
 ```m9 list```
 
 #### systemd command sets
-m9 sd install|uninstall|enable|disable|start|stop|status <runtime>   # you can use "all" as runtime
+m9 sd install|uninstall|enable|disable|start|stop|restart|status <runtime>   # you can use "all" as runtime
 
 - generate systemd unit files for m9 runtime and install them\
 ```m9 sd install <runtime>```
@@ -48,6 +48,8 @@ m9 sd install|uninstall|enable|disable|start|stop|status <runtime>   # you can u
 ```m9 sd enable <runtime>```
 - same as systemctl stop\
 ```m9 sd stop <runtime>```
+- same as systemctl restart\
+```m9 sd restart <runtime>```
 
 - print systemd unit status (systemctl subcommand `is-active` and `is-enabled`) \
 ```m9 sd status <runtime>```

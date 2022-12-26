@@ -404,6 +404,11 @@ class m9sd:
         if self.uninstalled_m9_services:
             print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
 
+    def sdrestart(self):
+        os.system(f"systemctl restart {' '.join(self.installed_m9_services)}")
+        if self.uninstalled_m9_services:
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
+
     def sdenable(self):
         os.system(f"systemctl enable {' '.join(self.installed_m9_services)}")
         if self.uninstalled_m9_services:
@@ -463,8 +468,8 @@ def parsecli(
     m9_build = subparsers.add_parser("build", help="build with runtime", usage="m9 build <project>|<path> <cmd> ...")
     m9_build.add_argument("runtime", help="runtime full name")
 
-    m9_systemd = subparsers.add_parser("sd", help="systemd command sets", usage="m9 sd install|uninstall|enable|disable|start|stop|status <runtime>")
-    m9_systemd.add_argument("action", choices=["install", "uninstall", "enable", "disable", "start", "stop", "status"])
+    m9_systemd = subparsers.add_parser("sd", help="systemd command sets", usage="m9 sd install|uninstall|enable|disable|start|stop|restart|status <runtime>")
+    m9_systemd.add_argument("action", choices=["install", "uninstall", "enable", "disable", "start", "stop", "restart", "status"])
     m9_systemd.add_argument("runtime", nargs="+", help="runtime full name (`all` for every runtime)")
 
     m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> -s|-b")
