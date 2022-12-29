@@ -444,10 +444,10 @@ def parsecli(
     m9_new.add_argument("project", help="project name")
     m9_new.add_argument("-f", "--force", help="overwrite existed project", dest="overwrite", default=False, action="store_true")
 
-    m9_init = subparsers.add_parser("init", help="init m9 runtime", usage="m9 init <runtime template> <runtime> <path>")
+    m9_init = subparsers.add_parser("init", help="init m9 runtime", usage="m9 init <runtime> <path>")
     m9_init.add_argument("runtime", help="runtime name")
     m9_init.add_argument("-p", "--proj", help="if provide a valid m9 project path, the dependencies would be installed to the runtime", dest="project", default=".")
-    m9_init.add_argument("-f", "--force", help="overwrite existed project", dest="overwrite", default=False, action="store_true")
+    m9_init.add_argument("-f", "--force", help="overwrite existed runtime", dest="overwrite", default=False, action="store_true")
 
     m9_up = subparsers.add_parser("up", help="startup m9 runtime instance", usage="m9 up <RUNTIME>")
     m9_up.add_argument("runtime", help="runtime full name")
