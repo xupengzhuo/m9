@@ -360,7 +360,7 @@ class m9sd:
 
     def sdstatus(self):
         if not self.installed_m9_services:
-            print("not services installed")
+            print("no services installed")
             return
         svcs = list(self.installed_m9_services)
         svcs.sort()
