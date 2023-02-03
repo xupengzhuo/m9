@@ -47,7 +47,6 @@ DEFAULT_LOGGING_DICT = {
 M9PATH = os.path.join(os.path.expanduser("~"), ".m9/")
 RELPATH_TPL_PROJ = "./template"
 RELPATH_PROJECTS = "./projects"
-RELPATH_BASEIMAGE = "./baseimage"
 RELPATH_RUNTIME = "./runtime"
 
 ABSPATH_PROJECT = os.path.join(M9PATH, os.path.basename(RELPATH_PROJECTS))
@@ -156,10 +155,6 @@ class m9util:
             else:
                 return
 
-    def load_project_baseimage(pth):
-        with open(os.path.join(pth, PROJECT_CONFIG)) as jfp:
-            return json.load(jfp)["baseimage"]
-
     def load_runtime_info(rn):
         try:
             with open(os.path.join(ABSPATH_RUNTIME, f"{rn}.json")) as jfp:
@@ -185,8 +180,8 @@ class m9:
         env = dict(os.environ.copy(), **{"M9_RUNTIME": runtime, "M9_PROJECT": project})
         subprocess.run(args=args, cwd=project_abspath, env=env)
 
-    def init(runtime, baseimage_abspath, project_abspath, project, args):
-        env = dict(os.environ.copy(), **{"M9_BASEIMAGE": baseimage_abspath or "", "M9_RUNTIME": runtime, "M9_PROJECT": project})
+    def init(runtime, project_abspath, project, args):
+        env = dict(os.environ.copy(), **{"M9_RUNTIME": runtime, "M9_PROJECT": project})
         subprocess.run(args=args, cwd=project_abspath, env=env)
         with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
             json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": project_abspath, "project": project}, jfp)
@@ -293,10 +288,14 @@ class m9:
         with open(os.path.join(proj_abspath, ".m9/meta.json")) as jfp:
             print(json.dumps(json.load(jfp), indent=4))
 
-    def dist(proj_abspath, runtime, distway, args):
+    def dist(proj_abspath, runtime, distimage, distway, args):
         env = os.environ.copy()
+        env["M9_PROJECT"] = runtime.split(".")[0]
         env["M9_RUNTIME"] = runtime.split(".")[1]
         env["M9_ARGS_distway"] = distway
+        if distimage:
+            env["M9_ARGS_distimage"] = "true"
+
         subprocess.run(args=args, cwd=proj_abspath, env=env)
 
     def deploy(project, runtime, pack_relpath, args):
@@ -472,8 +471,9 @@ def parsecli(
     m9_systemd.add_argument("action", choices=["install", "uninstall", "enable", "disable", "start", "stop", "restart", "status"])
     m9_systemd.add_argument("runtime", nargs="+", help="runtime full name (`all` for every runtime)")
 
-    m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> -s|-b")
+    m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> --image -s | -b")
     m9_dist.add_argument("runtime", help="runtime full name")
+    m9_dist.add_argument("-i", "--image", default=False, action="store_true", dest="distimage", help="distribute container image")
     g = m9_dist.add_mutually_exclusive_group(required=True)
     g.add_argument("-s", help="distribute as source", action="count")
     g.add_argument("-b", help="distribute as binary", action="count")
@@ -529,11 +529,7 @@ def proc(args):
             if not (_cmd := m9util.load_project_commad(project_path, "init")):
                 return log.error("this project doesn`t supply init command")
 
-            base_image = m9util.load_project_baseimage(project_path)
-            baseimage_path = None
-            if base_image and not (baseimage_path := m9util.find_template(base_image, RELPATH_BASEIMAGE)):
-                return log.error(f"failed to find baseimage: {project_path}")
-            m9.init(args.runtime, baseimage_path, project_path, os.path.basename(project_path), _cmd)
+            m9.init(args.runtime, project_path, os.path.basename(project_path), _cmd)
 
         case "up":
             if not (rtinfo := m9util.load_runtime_info(args.runtime)):
@@ -601,7 +597,7 @@ def proc(args):
             if not distway:
                 return log.error("missing distribute way")
 
-            m9.dist(rtinfo["project_dir"], args.runtime, distway, _cmd)
+            m9.dist(rtinfo["project_dir"], args.runtime, args.distimage, distway, _cmd)
 
         case "deploy":
             if not os.path.exists(args.package):
