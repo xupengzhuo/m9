@@ -6,6 +6,7 @@ all :
 	echo hola
 
 ################################################################################
+
 unsed_port := $(shell python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1])')
 
 init:
@@ -20,9 +21,9 @@ ifneq ($(and $(M9_RUNTIME),$(M9_BASEIMAGE),$(M9_PROJECT)),)
 	@echo default unit port is: $(unsed_port)
 
 endif
-################################################################################
 
 ################################################################################
+
 ifdef M9_ARGS_daemon
 daemon = -d
 else
@@ -48,9 +49,9 @@ ifdef M9_RUNTIME_FULLNAME
 	-v /etc/localtime:/etc/localtime \
 	--name=$(M9_RUNTIME_FULLNAME) $(M9_RUNTIME_FULLNAME) redis-server ./redis.conf;
 endif
-################################################################################
 
 ################################################################################
+
 ifdef M9_ARGS_follow
 log_mode = -f
 else
@@ -61,18 +62,19 @@ log:
 ifdef M9_RUNTIME_FULLNAME
 	podman logs $(log_mode) $(M9_RUNTIME_FULLNAME) 
 endif
-################################################################################
 
 ################################################################################
+
 down:
 ifdef M9_RUNTIME_FULLNAME
 	podman rm -f $(M9_RUNTIME_FULLNAME) 
 endif
-################################################################################
 
 ################################################################################
+
 re:
 ifdef M9_RUNTIME_FULLNAME
 	podman restart $(M9_RUNTIME_FULLNAME)
 endif
+
 ################################################################################
