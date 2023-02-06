@@ -8,7 +8,7 @@ all :
 ################################################################################
 unsed_port := $(shell python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1])')
 init:
-ifneq ($(and $(M9_RUNTIME),$(M9_BASEIMAGE),$(M9_PROJECT)),)
+ifneq ($(and $(M9_RUNTIME),$(M9_PROJECT)),)
 	@mkdir -p $(runtime_path); 
 	@cp  ${M9_BASEIMAGE}/* $(runtime_path);
 	@cp ./requirements.txt $(runtime_path)/requirements.txt;

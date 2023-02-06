@@ -119,8 +119,8 @@ endif
 ################################################################################
 
 build:
-	@mkdir -p ./build/;
-	@cp -r $(runtime_path) ./build/;
+	@mkdir -p ./build/
+	@cp -rf $(runtime_path) ./build/
 	@echo "$$BASEIMAGEFORBUILD" > ./build/$(M9_RUNTIME)/Dockerfile
 	@echo "$$IMAGECMD" >> ./build/$(M9_RUNTIME)/Dockerfile
 	@echo "\nnuitka\nordered-set" > ./build/$(M9_RUNTIME)/requirements.txt
@@ -131,6 +131,7 @@ build:
 
 dist:
 	@rm -rf ./dist && mkdir ./dist/
+	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/
 
 ifeq ($(M9_ARGS_distway), source)
 	@cp -f start.py ./dist/
@@ -138,7 +139,6 @@ endif
 ifeq ($(M9_ARGS_distway), binary)
 	@cp start.bin ./dist/
 endif
-	@cp --parents IntellivueProtocol/*.txt ./dist/
 
 ifdef M9_ARGS_distimage
 	@echo "FROM localhost/$(M9_PROJECT).$(M9_RUNTIME)" > ./dist/Dockerfile
@@ -154,29 +154,26 @@ endif
 	r['project_dir']=None;r['dist_runtime']='$(M9_RUNTIME)';r['dist_way']='$(M9_ARGS_distway)';r['dist_image']='$(M9_ARGS_distimage)';r['dist_at']=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'); \
 	c=open('./dist/.m9/meta.json','w');c.write(json.dumps(r));c.close()"
 
-ifeq ($(M9_ARGS_distimage), false)
-	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/
-endif
-
 ################################################################################
 
 deploy:
 ifndef M9_ARGS_distimage
 	@$(cli) build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME)
-	@cp -Trvf $(runtime_path) $(M9_ARGS_targetdir)/$(runtime_path)
+	@cp -Trvf $(runtime_path) $(M9_ARGS_targetdir)/$(runtime_path) || :
 
   ifeq ($(M9_ARGS_distway), source)
-	@cp -vf ./start.py $(M9_ARGS_targetdir)
+	@cp -vf ./start.py $(M9_ARGS_targetdir) || :
   endif
   ifeq ($(M9_ARGS_distway), binary)
-	@cp -vf ./start.bin $(M9_ARGS_targetdir)
+	@cp -vf ./start.bin $(M9_ARGS_targetdir) || :
   endif
 
 else
-	@([ -e $(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).t1ar ] && $(cli) load -i $(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar) || echo image file not found 
+	@([ -e $(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar ] && $(cli) load -i $(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar) || echo image file not found 
+	@$(cli) tag $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage) $(M9_PROJECT).$(M9_RUNTIME):latest
 endif
 
-	@cp -vf .env $(M9_ARGS_targetdir);
-	@cp -vf --parents .m9/Makefile .m9/project.json $(M9_ARGS_targetdir);
+	@cp -vf .env $(M9_ARGS_targetdir) || :
+	@cp -vf --parents .m9/Makefile .m9/project.json $(M9_ARGS_targetdir) || :
 
 ################################################################################

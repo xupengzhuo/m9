@@ -307,6 +307,7 @@ class m9:
         env = os.environ.copy()
 
         if not (target_dir := m9util.find_project(project, trypath=False)):  # create project object here
+            print("deploying new project...")
             proj_abspath = os.path.abspath(os.path.join(CURRENT_PATH, pack_relpath))
             plink = os.path.join(ABSPATH_PROJECT, project)
 
@@ -328,8 +329,8 @@ class m9:
             if not m9util.find_runtime(f"{project}.{runtime}"):
                 with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
                     json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": target_dir, "project": project}, jfp)
-        else:
-            env["M9_ARGS_targetdir"] = target_dir  # path to deply code
+
+        env["M9_ARGS_targetdir"] = target_dir  # path to deply code
         env["M9_PROJECT"] = project
         env["M9_RUNTIME"] = runtime
         env["M9_ARGS_distway"] = distway
@@ -490,7 +491,7 @@ def parsecli(
     g.add_argument("-b", help="distribute as binary", action="count")
 
     m9_deploy = subparsers.add_parser("deploy", help="deploy distribution package", usage="m9 deploy <package> ...")
-    m9_deploy.add_argument("package", help="deploy distribution package")
+    m9_deploy.add_argument("package", help="distributed package folder")
 
     args = parser.parse_args(args=cliargs)
     return args
@@ -652,7 +653,7 @@ def proc(args):
                 return log.error("invalid package")
 
             if "dist_runtime" not in pinfo:
-                return log.error("invalid package")
+                return log.error("invalid package info")
 
             print("package info:")
             [*map(print, pinfo.items())]

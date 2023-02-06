@@ -2,13 +2,35 @@ runtime_path = .m9/runtime/$(M9_RUNTIME)
 
 .PHONY : all init up down log re build dist deploy
 
+cli = podman
+pip_index = https://pypi.tuna.tsinghua.edu.cn/simple
+
+define BASEIMAGE
+FROM nginx/unit:1.28.0-python3.10
+endef
+
+define BASEIMAGEFORBUILD
+FROM nginx/unit:1.28.0-python3.10
+endef
+
+define IMAGECMD
+WORKDIR /usr/src/
+COPY requirements.txt /usr/etc/
+RUN pip3 install --index-url $(pip_index) -r /usr/etc/requirements.txt
+endef
+
+export BASEIMAGE
+export BASEIMAGEFORBUILD
+export IMAGECMD
+
 all :
 	echo hola
 
 ################################################################################
+
 unsed_port := $(shell python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1])')
 init:
-ifneq ($(and $(M9_RUNTIME),$(M9_BASEIMAGE),$(M9_PROJECT)),)
+ifneq ($(and $(M9_RUNTIME),$(M9_PROJECT)),)
 	@mkdir -p $(runtime_path); 
 	@cp  ${M9_BASEIMAGE}/* $(runtime_path);
 	@cp ./requirements.txt $(runtime_path)/requirements.txt;
@@ -18,14 +40,17 @@ ifneq ($(and $(M9_RUNTIME),$(M9_BASEIMAGE),$(M9_PROJECT)),)
 
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 
+  ifneq ($(shell grep 'M9_PLACEHOLDER_port' uwsgi/config.yaml),)
 	@python -c "c=open('uwsgi/config.yaml'); \
 	r=c.read().replace('M9_PLACEHOLDER_port','${unsed_port}');c.close(); \
 	c=open('uwsgi/config.yaml','w');c.write(r);c.close()";
 	@echo default uwsgi port is: $(unsed_port)
+  endif
+
 endif
-################################################################################
 
 ################################################################################
+
 ifdef M9_ARGS_daemon
 daemon = -d
 else
@@ -51,9 +76,9 @@ ifdef M9_RUNTIME_FULLNAME
 	-v /etc/localtime:/etc/localtime \
 	--name=$(M9_RUNTIME_FULLNAME) $(M9_RUNTIME_FULLNAME);
 endif
-################################################################################
 
 ################################################################################
+
 ifdef M9_ARGS_follow
 log_mode = -f
 else
@@ -64,32 +89,33 @@ log:
 ifdef M9_RUNTIME_FULLNAME
 	podman logs $(log_mode) $(M9_RUNTIME_FULLNAME) 
 endif
-################################################################################
 
 ################################################################################
+
 down:
 ifdef M9_RUNTIME_FULLNAME
 	podman rm -f $(M9_RUNTIME_FULLNAME) 
 endif
-################################################################################
 
 ################################################################################
+
 re:
 ifdef M9_RUNTIME_FULLNAME
 	podman restart $(M9_RUNTIME_FULLNAME)
 endif
-################################################################################
+
 
 ################################################################################
+
 build:
 	@mkdir -p ./build/;
 	@cp -r $(runtime_path) ./build/;
 	@echo -e "\nnuitka\nordered-set" >> ./build/$(M9_RUNTIME)/requirements.txt;
 	@podman build ./build/$(M9_RUNTIME) -t $(M9_PROJECT).$(M9_RUNTIME)_build ;
 	@podman run --rm -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build python3 -m nuitka --module --include-module=wsgi wsgi;
-################################################################################
 
 ################################################################################
+
 dist:
 	@rm -rf ./dist && mkdir ./dist/;
 	@cp --parents .m9/meta.json .m9/Makefile .m9/project.json ./dist/;
@@ -105,9 +131,9 @@ ifeq ($(M9_ARGS_distway), binary)
 endif
 	@cp --parents uwsgi/config.yaml ./dist/;
 	@cp .env.dist ./dist/.env || (echo "[info] using '.env' for distribution if '.env.dist' not found" && cp .env ./dist/.env) ;
-################################################################################
 
 ################################################################################
+
 deploy:
 	@podman build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME);
 ifdef M9_ARGS_targetdir
@@ -118,4 +144,5 @@ ifdef M9_ARGS_targetdir
 	@cp -vf --parents .m9/Makefile .m9/project.json $(M9_ARGS_targetdir);
 	@cp -Trvf $(runtime_path) $(M9_ARGS_targetdir)/$(runtime_path);
 endif
+
 ################################################################################
