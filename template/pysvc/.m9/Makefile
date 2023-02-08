@@ -4,16 +4,12 @@ runtime_path = .m9/runtime/$(M9_RUNTIME)
 
 cli = podman
 pip_index = https://pypi.tuna.tsinghua.edu.cn/simple
+image = python:3.10-slim
+image_build = python:3.10
 
-define BASEIMAGE
-FROM python:3.10-slim
-endef
-
-define BASEIMAGEFORBUILD
-FROM python:3.10
-endef
 
 define IMAGECMD
+FROM $(baseimage)
 WORKDIR /usr/src/
 COPY requirements.txt /usr/etc/
 COPY entrypoint.sh /
@@ -32,8 +28,6 @@ exec "$$@"
 endef
 
 export ENTRYPOINT
-export BASEIMAGE
-export BASEIMAGEFORBUILD
 export IMAGECMD
 
 all :
@@ -41,12 +35,12 @@ all :
 
 ################################################################################
 
+init: export baseimage=$(image)
 init:
 ifneq ($(and $(M9_RUNTIME),$(M9_PROJECT)),)
 	@mkdir -p $(runtime_path)
 	@echo "$$ENTRYPOINT" > $(runtime_path)/entrypoint.sh && chmod +x $(runtime_path)/entrypoint.sh
-	@echo "$$BASEIMAGE" > $(runtime_path)/Dockerfile
-	@echo "$$IMAGECMD" >> $(runtime_path)/Dockerfile
+	@echo "$$IMAGECMD" > $(runtime_path)/Dockerfile
 	@echo "ENTRYPOINT [\"/entrypoint.sh\"]" >> $(runtime_path)/Dockerfile
 	@cp requirements.txt $(runtime_path)
 	@$(cli) build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME)
@@ -118,12 +112,12 @@ endif
 
 ################################################################################
 
+build: export baseimage=$(image_build)
 build:
 	@mkdir -p ./build/
 	@cp -rf $(runtime_path) ./build/
-	@echo "$$BASEIMAGEFORBUILD" > ./build/$(M9_RUNTIME)/Dockerfile
-	@echo "$$IMAGECMD" >> ./build/$(M9_RUNTIME)/Dockerfile
-	@echo "\nnuitka\nordered-set" > ./build/$(M9_RUNTIME)/requirements.txt
+	@echo "$$IMAGECMD" > ./build/$(M9_RUNTIME)/Dockerfile
+	@echo "\nnuitka\nordered-set" >> ./build/$(M9_RUNTIME)/requirements.txt
 	@$(cli) build ./build/$(M9_RUNTIME) -t $(M9_PROJECT).$(M9_RUNTIME)_build 
 	@$(cli) run --rm --entrypoint python3 -v ./:/usr/src/:Z $(M9_PROJECT).$(M9_RUNTIME)_build -m nuitka --follow-imports start.py
 
@@ -131,7 +125,6 @@ build:
 
 dist:
 	@rm -rf ./dist && mkdir ./dist/
-	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/
 
 ifeq ($(M9_ARGS_distway), source)
 	@cp -f start.py ./dist/
@@ -146,10 +139,11 @@ ifdef M9_ARGS_distimage
 	@$(cli) build ./dist/ -t $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage) >/dev/null
 	@echo "image ready: $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage)"
 	@rm -rf ./dist/*
-	@$(cli) save -o ./dist/$(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage)
+	@$(cli) save -o ./dist/$(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar --format oci-archive $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage)
 endif
 	@cp .env ./dist/.env
 	@cp --parents .m9/meta.json .m9/Makefile .m9/project.json ./dist/
+	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/
 	@python -c "import json,datetime;c=open('./dist/.m9/meta.json'); r=json.load(c);c.close(); \
 	r['project_dir']=None;r['dist_runtime']='$(M9_RUNTIME)';r['dist_way']='$(M9_ARGS_distway)';r['dist_image']='$(M9_ARGS_distimage)';r['dist_at']=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'); \
 	c=open('./dist/.m9/meta.json','w');c.write(json.dumps(r));c.close()"
@@ -160,19 +154,16 @@ deploy:
 ifndef M9_ARGS_distimage
 	@$(cli) build $(runtime_path) -t $(M9_PROJECT).$(M9_RUNTIME)
 	@cp -Trvf $(runtime_path) $(M9_ARGS_targetdir)/$(runtime_path) || :
-
   ifeq ($(M9_ARGS_distway), source)
 	@cp -vf ./start.py $(M9_ARGS_targetdir) || :
   endif
   ifeq ($(M9_ARGS_distway), binary)
 	@cp -vf ./start.bin $(M9_ARGS_targetdir) || :
   endif
-
 else
 	@([ -e $(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar ] && $(cli) load -i $(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar) || echo image file not found 
 	@$(cli) tag $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage) $(M9_PROJECT).$(M9_RUNTIME):latest
 endif
-
 	@cp -vf .env $(M9_ARGS_targetdir) || :
 	@cp -vf --parents .m9/Makefile .m9/project.json $(M9_ARGS_targetdir) || :
 
