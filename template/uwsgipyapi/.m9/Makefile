@@ -4,15 +4,31 @@ runtime_path = .m9/runtime/$(M9_RUNTIME)
 
 cli = podman
 pip_index = https://pypi.tuna.tsinghua.edu.cn/simple
+apt_mirror= mirrors.tuna.tsinghua.edu.cn
 image = python:3.10-slim
 image_build = python:3.10
 
 
 define IMAGECMD
-FROM $(baseimage)
-WORKDIR /usr/src/
+FROM $(baseimage) as BUILDER
+RUN set -ex \\
+	&& sed -i -e 's/deb.debian.org/$(apt_mirror)/g' /etc/apt/sources.list \\
+	&& apt-get update \\
+	&& apt-get install --no-install-recommends --no-install-suggests -y build-essential \\
+	&& pip install --index-url $(pip_index) uwsgi \\
+    && ldd /usr/local/bin/uwsgi | awk '/=>/{print $$(NF-1)}' | while read n; do dpkg-query -S $$n; done | sed 's/^\([^:]\+\):.*$$/\\1/' | sort | uniq > /requirements.apt
+FROM $(baseimage) as BASE
+COPY --from=BUILDER /usr/local/bin/uwsgi /usr/local/bin/uwsgi
+COPY --from=BUILDER /requirements.apt /requirements.apt
+COPY --from=BUILDER /etc/apt/sources.list /etc/apt/sources.list
 COPY requirements.txt /usr/etc/
-RUN pip3 install --index-url $(pip_index) -r /usr/etc/requirements.txt
+RUN set -x \\
+	&& apt update \\
+    && apt --no-install-recommends --no-install-suggests -y install curl $$(cat /requirements.apt) \\
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \\
+    && rm -f /requirements.apt \\
+	&& pip3 install --index-url $(pip_index) -r /usr/etc/requirements.txt
+WORKDIR /usr/src/
 CMD ["uwsgi", "-y", "/usr/src/uwsgi/config.yaml"]
 endef
 
