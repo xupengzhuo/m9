@@ -408,7 +408,7 @@ class m9sd:
     def sdstart(self):
         os.system(f"systemctl start {' '.join(self.installed_m9_services)}")
         if self.uninstalled_m9_services:
-            print(f"services didn`t installed:\n{' '.join(self.uninstalled_services)}")
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
 
     def sdstop(self):
         os.system(f"systemctl stop {' '.join(self.installed_m9_services)}")
@@ -423,7 +423,7 @@ class m9sd:
     def sdenable(self):
         os.system(f"systemctl enable {' '.join(self.installed_m9_services)}")
         if self.uninstalled_m9_services:
-            print(f"services didn`t installed:\n{' '.join(self.uninstalled_services)}")
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
 
     def sddisable(self):
         os.system(f"systemctl disable {' '.join(self.installed_m9_services)}")
