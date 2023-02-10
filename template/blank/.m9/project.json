@@ -1,5 +1,4 @@
 {
-    "baseimage": null,
     "commands": [
         {
             "name": "init",

@@ -1,5 +1,4 @@
 {
-    "baseimage": "redis705",
     "commands": [
         {
             "name": "init",
@@ -50,6 +49,26 @@
                 ".m9/Makefile"
             ],
             "desc": "log"
+        },
+        {
+            "name": "dist",
+            "args": [
+                "make",
+                "dist",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "dist"
+        },
+        {
+            "name": "deploy",
+            "args": [
+                "make",
+                "deploy",
+                "-f",
+                ".m9/Makefile"
+            ],
+            "desc": "deploy"
         }
     ]
 }

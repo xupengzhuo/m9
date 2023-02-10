@@ -1,5 +1,4 @@
 {
-    "baseimage": "unitpy310",
     "commands": [
         {
             "name": "init",

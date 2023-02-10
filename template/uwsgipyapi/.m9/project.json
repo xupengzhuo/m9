@@ -1,5 +1,4 @@
 {
-    "baseimage": "python310",
     "commands": [
         {
             "name": "init",

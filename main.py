@@ -47,7 +47,6 @@ DEFAULT_LOGGING_DICT = {
 M9PATH = os.path.join(os.path.expanduser("~"), ".m9/")
 RELPATH_TPL_PROJ = "./template"
 RELPATH_PROJECTS = "./projects"
-RELPATH_BASEIMAGE = "./baseimage"
 RELPATH_RUNTIME = "./runtime"
 
 ABSPATH_PROJECT = os.path.join(M9PATH, os.path.basename(RELPATH_PROJECTS))
@@ -109,9 +108,13 @@ class m9util:
             os.makedirs(ABSPATH_RUNTIME)
             log.warning(f"m9 path inited at: {M9PATH}")
 
-    def check_name(n):
+    def check_foldername(n):
         """checks for a valid foldername"""
         return bool(re.match(r"^[A-z0-9\-\_]+$", n))
+
+    def check_tagname(n):
+        """checks for a valid foldername"""
+        return n.isalnum()
 
     def find_template(tn, rpth):
         """find template name in relative path"""
@@ -156,10 +159,6 @@ class m9util:
             else:
                 return
 
-    def load_project_baseimage(pth):
-        with open(os.path.join(pth, PROJECT_CONFIG)) as jfp:
-            return json.load(jfp)["baseimage"]
-
     def load_runtime_info(rn):
         try:
             with open(os.path.join(ABSPATH_RUNTIME, f"{rn}.json")) as jfp:
@@ -185,8 +184,8 @@ class m9:
         env = dict(os.environ.copy(), **{"M9_RUNTIME": runtime, "M9_PROJECT": project})
         subprocess.run(args=args, cwd=project_abspath, env=env)
 
-    def init(runtime, baseimage_abspath, project_abspath, project, args):
-        env = dict(os.environ.copy(), **{"M9_BASEIMAGE": baseimage_abspath or "", "M9_RUNTIME": runtime, "M9_PROJECT": project})
+    def init(runtime, project_abspath, project, args):
+        env = dict(os.environ.copy(), **{"M9_RUNTIME": runtime, "M9_PROJECT": project})
         subprocess.run(args=args, cwd=project_abspath, env=env)
         with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
             json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": project_abspath, "project": project}, jfp)
@@ -293,37 +292,49 @@ class m9:
         with open(os.path.join(proj_abspath, ".m9/meta.json")) as jfp:
             print(json.dumps(json.load(jfp), indent=4))
 
-    def dist(proj_abspath, runtime, distway, args):
+    def dist(proj_abspath, runtime, distimage, distway, args):
         env = os.environ.copy()
+        env["M9_PROJECT"] = runtime.split(".")[0]
         env["M9_RUNTIME"] = runtime.split(".")[1]
         env["M9_ARGS_distway"] = distway
+
+        if distimage:
+            env["M9_ARGS_distimage"] = distimage
+
         subprocess.run(args=args, cwd=proj_abspath, env=env)
 
-    def deploy(project, runtime, pack_relpath, args):
+    def deploy(project, runtime, pack_relpath, distway, distimage, args):
         env = os.environ.copy()
 
         if not (target_dir := m9util.find_project(project, trypath=False)):  # create project object here
-
+            print("deploying new project...")
             proj_abspath = os.path.abspath(os.path.join(CURRENT_PATH, pack_relpath))
             plink = os.path.join(ABSPATH_PROJECT, project)
 
             with open(f"{pack_relpath}/.m9/meta.json", "r+") as jfp:
                 r = json.load(jfp)
-                r["project_dir"] = proj_abspath
+                meta = {
+                    "project": r["project"],
+                    "project_dir": proj_abspath,
+                    "template": r["template"],
+                    "created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                }
                 jfp.seek(0)
                 jfp.truncate()
-                jfp.write(json.dumps(r))
+                jfp.write(json.dumps(meta))
+
             os.symlink(f"{proj_abspath}/.m9/meta.json", plink)
             target_dir = proj_abspath
 
             if not m9util.find_runtime(f"{project}.{runtime}"):
                 with open(os.path.join(ABSPATH_RUNTIME, f"{project}.{runtime}.json"), "w") as jfp:
                     json.dump({"created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "project_dir": target_dir, "project": project}, jfp)
-        else:
-            env["M9_ARGS_targetdir"] = target_dir  # path to deply code
 
+        env["M9_ARGS_targetdir"] = target_dir  # path to deply code
         env["M9_PROJECT"] = project
         env["M9_RUNTIME"] = runtime
+        env["M9_ARGS_distway"] = distway
+        env["M9_ARGS_distimage"] = distimage
         subprocess.run(args=args, cwd=pack_relpath, env=env)
 
 
@@ -397,7 +408,7 @@ class m9sd:
     def sdstart(self):
         os.system(f"systemctl start {' '.join(self.installed_m9_services)}")
         if self.uninstalled_m9_services:
-            print(f"services didn`t installed:\n{' '.join(self.uninstalled_services)}")
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
 
     def sdstop(self):
         os.system(f"systemctl stop {' '.join(self.installed_m9_services)}")
@@ -412,7 +423,7 @@ class m9sd:
     def sdenable(self):
         os.system(f"systemctl enable {' '.join(self.installed_m9_services)}")
         if self.uninstalled_m9_services:
-            print(f"services didn`t installed:\n{' '.join(self.uninstalled_services)}")
+            print(f"services didn`t installed:\n{' '.join(self.uninstalled_m9_services)}")
 
     def sddisable(self):
         os.system(f"systemctl disable {' '.join(self.installed_m9_services)}")
@@ -445,41 +456,42 @@ def parsecli(
     m9_new.add_argument("-f", "--force", help="overwrite existed project", dest="overwrite", default=False, action="store_true")
 
     m9_init = subparsers.add_parser("init", help="init m9 runtime", usage="m9 init <runtime> <path>")
-    m9_init.add_argument("runtime", help="runtime name")
+    m9_init.add_argument("runtime", help="runtime name", nargs='?',default="default")
     m9_init.add_argument("-p", "--proj", help="if provide a valid m9 project path, the dependencies would be installed to the runtime", dest="project", default=".")
     m9_init.add_argument("-f", "--force", help="overwrite existed runtime", dest="overwrite", default=False, action="store_true")
 
     m9_up = subparsers.add_parser("up", help="startup m9 runtime instance", usage="m9 up <RUNTIME>")
-    m9_up.add_argument("runtime", help="runtime full name")
+    m9_up.add_argument("runtime", help="runtime name", nargs='?',default="default")
     m9_up.add_argument("-d", "--daemon", help="daemon mode", action="store_true", dest="daemon")
     m9_up.add_argument("--dry-run", help="ignore m9 project, just startup the runtime", action="store_true", dest="dryrun")
     m9_up.add_argument("-e", "--entry", help="specify the entry ", action="append", dest="entry")
 
     m9_log = subparsers.add_parser("down", help="ending runtime", usage="m9 down <RUNTIME>")
-    m9_log.add_argument("runtime", help="runtime full name")
+    m9_log.add_argument("runtime", help="runtime name", nargs='?',default="default")
 
     m9_log = subparsers.add_parser("log", help="show runtime log", usage="m9 log <RUNTIME>")
-    m9_log.add_argument("runtime", help="runtime full name")
+    m9_log.add_argument("runtime", help="runtime name", nargs='?',default="default")
     m9_log.add_argument("-f", "--follow", help="tail log", action="store_true", dest="follow")
 
     m9_log = subparsers.add_parser("re", help="restart full runtime", usage="m9 re <RUNTIME>")
-    m9_log.add_argument("runtime", help="runtime full name")
+    m9_log.add_argument("runtime", help="runtime name", nargs='?',default="default")
 
     m9_build = subparsers.add_parser("build", help="build with runtime", usage="m9 build <project>|<path> <cmd> ...")
-    m9_build.add_argument("runtime", help="runtime full name")
+    m9_build.add_argument("runtime", help="runtime full name", nargs='?',default="default")
 
     m9_systemd = subparsers.add_parser("sd", help="systemd command sets", usage="m9 sd install|uninstall|enable|disable|start|stop|restart|status <runtime>")
     m9_systemd.add_argument("action", choices=["install", "uninstall", "enable", "disable", "start", "stop", "restart", "status"])
     m9_systemd.add_argument("runtime", nargs="+", help="runtime full name (`all` for every runtime)")
 
-    m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> -s|-b")
-    m9_dist.add_argument("runtime", help="runtime full name")
-    g = m9_dist.add_mutually_exclusive_group(required=True)
-    g.add_argument("-s", help="distribute as source", action="count")
+    m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> --image <DISTIMAGE TAG> -s | -b")
+    m9_dist.add_argument("runtime", help="runtime name", nargs='?',default="default")
+    m9_dist.add_argument("-i", "--image", help="distribute container image", dest="distimage", required=False)
+    g = m9_dist.add_mutually_exclusive_group(required=False)
+    g.add_argument("-s", help="distribute as source (default way)", action="count", default=1)
     g.add_argument("-b", help="distribute as binary", action="count")
 
     m9_deploy = subparsers.add_parser("deploy", help="deploy distribution package", usage="m9 deploy <package> ...")
-    m9_deploy.add_argument("package", help="deploy distribution package")
+    m9_deploy.add_argument("package", help="distributed package folder")
 
     args = parser.parse_args(args=cliargs)
     return args
@@ -506,7 +518,7 @@ def proc(args):
 
         case "new":
             pn = args.project
-            if pn != "." and not m9util.check_name(pn):
+            if pn != "." and not m9util.check_foldername(pn):
                 log.error("check your project name")
                 return
 
@@ -517,7 +529,7 @@ def proc(args):
             m9.new(pn, template_path, args.overwrite)
 
         case "init":
-            if not m9util.check_name(args.runtime):
+            if not m9util.check_foldername(args.runtime):
                 return log.error("check your runtime name")
 
             if m9util.find_runtime(args.runtime) and not args.overwrite:
@@ -529,56 +541,77 @@ def proc(args):
             if not (_cmd := m9util.load_project_commad(project_path, "init")):
                 return log.error("this project doesn`t supply init command")
 
-            base_image = m9util.load_project_baseimage(project_path)
-            baseimage_path = None
-            if base_image and not (baseimage_path := m9util.find_template(base_image, RELPATH_BASEIMAGE)):
-                return log.error(f"failed to find baseimage: {project_path}")
-            m9.init(args.runtime, baseimage_path, project_path, os.path.basename(project_path), _cmd)
+            m9.init(args.runtime, project_path, os.path.basename(project_path), _cmd)
 
         case "up":
-            if not (rtinfo := m9util.load_runtime_info(args.runtime)):
+            if IN_PROJECT and "." not in args.runtime:
+                rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
+            else:
+                rfn = args.runtime
+
+            if not (rtinfo := m9util.load_runtime_info(rfn)):
                 return log.error("runtime not found")
 
             if not (_cmd := m9util.load_project_commad(rtinfo["project_dir"], "up")):
                 return log.error("this project doesn`t supply up command")
 
-            m9.up(args.runtime, rtinfo["project_dir"], _cmd, args.daemon, args.dryrun)
+            m9.up(rfn, rtinfo["project_dir"], _cmd, args.daemon, args.dryrun)
 
         case "log":
-            if not (rtinfo := m9util.load_runtime_info(args.runtime)):
+            if IN_PROJECT and "." not in args.runtime:
+                rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
+            else:
+                rfn = args.runtime
+
+            if not (rtinfo := m9util.load_runtime_info(rfn)):
                 return log.error("runtime not found")
 
             if not (_cmd := m9util.load_project_commad(rtinfo["project_dir"], "log")):
                 return log.error("this project doesn`t supply log command")
 
-            m9.log(args.runtime, rtinfo["project_dir"], _cmd, args.follow)
+            m9.log(rfn, rtinfo["project_dir"], _cmd, args.follow)
 
         case "down":
-            if not (rtinfo := m9util.load_runtime_info(args.runtime)):
+            if IN_PROJECT and "." not in args.runtime:
+                rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
+            else:
+                rfn = args.runtime
+
+            if not (rtinfo := m9util.load_runtime_info(rfn)):
                 return log.error("runtime not found")
 
             if not (_cmd := m9util.load_project_commad(rtinfo["project_dir"], "down")):
                 return log.error("this project doesn`t supply down command")
 
-            m9.down(args.runtime, rtinfo["project_dir"], _cmd)
+            m9.down(rfn, rtinfo["project_dir"], _cmd)
 
         case "re":
-            if not (rtinfo := m9util.load_runtime_info(args.runtime)):
+            if IN_PROJECT and "." not in args.runtime:
+                rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
+            else:
+                rfn = args.runtime
+
+            if not (rtinfo := m9util.load_runtime_info(rfn)):
                 return log.error("runtime not found")
 
             if not (_cmd := m9util.load_project_commad(rtinfo["project_dir"], "re")):
                 return log.error("this project doesn`t supply re command")
 
-            m9.re(args.runtime, rtinfo["project_dir"], _cmd)
+            m9.re(rfn, rtinfo["project_dir"], _cmd)
 
         case "build":
-            if not (rtinfo := m9util.load_runtime_info(args.runtime)):
+            if IN_PROJECT and "." not in args.runtime:
+                rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
+            else:
+                rfn = args.runtime
+
+            if not (rtinfo := m9util.load_runtime_info(rfn)):
                 return log.error("runtime not found")
 
             if not (_cmd := m9util.load_project_commad(rtinfo["project_dir"], "build")):
                 return log.error("this project doesn`t supply build command")
 
-            m9.build(rtinfo["project_dir"], args.runtime, _cmd)
+            m9.build(rtinfo["project_dir"], rfn, _cmd)
 
         case "show":
             if not (project_path := m9util.find_project(args.project)):
@@ -587,7 +620,15 @@ def proc(args):
             m9.show(project_path)
 
         case "dist":
-            if not (rtinfo := m9util.load_runtime_info(args.runtime)):
+            if IN_PROJECT and "." not in args.runtime:
+                rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
+            else:
+                rfn = args.runtime
+
+            if args.distimage and not m9util.check_tagname(args.distimage):
+                return log.error("tag can only be composed of numbers and letters")
+
+            if not (rtinfo := m9util.load_runtime_info(rfn)):
                 return log.error("runtime not found")
 
             if not (_cmd := m9util.load_project_commad(rtinfo["project_dir"], "dist")):
@@ -601,7 +642,7 @@ def proc(args):
             if not distway:
                 return log.error("missing distribute way")
 
-            m9.dist(rtinfo["project_dir"], args.runtime, distway, _cmd)
+            m9.dist(rtinfo["project_dir"], rfn, args.distimage, distway, _cmd)
 
         case "deploy":
             if not os.path.exists(args.package):
@@ -610,14 +651,16 @@ def proc(args):
             if not (pinfo := m9util.load_project_info(args.package)):
                 return log.error("invalid package")
 
+            if "dist_runtime" not in pinfo:
+                return log.error("invalid package info")
+
             print("package info:")
             [*map(print, pinfo.items())]
 
-            runtime = os.listdir(os.path.join(args.package, ".m9/runtime/"))[0]
             if not (_cmd := m9util.load_project_commad(args.package, "deploy")):
                 return log.error("this project doesn`t supply deploy command")
 
-            m9.deploy(pinfo["project"], runtime, args.package, _cmd)
+            m9.deploy(pinfo["project"], pinfo['dist_runtime'], args.package, pinfo['dist_way'], pinfo['dist_image'], _cmd)
 
         case "sd":
             all_runtime = [r.rsplit(".", 1)[0] for r in os.listdir(ABSPATH_RUNTIME)]

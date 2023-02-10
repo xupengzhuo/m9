@@ -549,7 +549,7 @@ class WsgiServer(object):
         self.cookie = AttrDict({})
 
         try:
-            self.session = AttrDict(json.loads(environ["USER_SESSION"]))
+            self.session = AttrDict(json.loads(environ.get("USER_SESSION") or environ.get('HTTP_USER_SESSION')))
         except:
             pass
 

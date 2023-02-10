@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-authors = [{ name = "xupengzhuo", email = "xupengzhuo@gmail.com" }]
+authors = [{ name = "", email = "" }]
 name = "uwsgipyapi"
 version = "0.0.1"
 description = ""
