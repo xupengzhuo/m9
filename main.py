@@ -456,38 +456,38 @@ def parsecli(
     m9_new.add_argument("-f", "--force", help="overwrite existed project", dest="overwrite", default=False, action="store_true")
 
     m9_init = subparsers.add_parser("init", help="init m9 runtime", usage="m9 init <runtime> <path>")
-    m9_init.add_argument("runtime", help="runtime name")
+    m9_init.add_argument("runtime", help="runtime name", nargs='?',default="default")
     m9_init.add_argument("-p", "--proj", help="if provide a valid m9 project path, the dependencies would be installed to the runtime", dest="project", default=".")
     m9_init.add_argument("-f", "--force", help="overwrite existed runtime", dest="overwrite", default=False, action="store_true")
 
     m9_up = subparsers.add_parser("up", help="startup m9 runtime instance", usage="m9 up <RUNTIME>")
-    m9_up.add_argument("runtime", help="runtime full name")
+    m9_up.add_argument("runtime", help="runtime name", nargs='?',default="default")
     m9_up.add_argument("-d", "--daemon", help="daemon mode", action="store_true", dest="daemon")
     m9_up.add_argument("--dry-run", help="ignore m9 project, just startup the runtime", action="store_true", dest="dryrun")
     m9_up.add_argument("-e", "--entry", help="specify the entry ", action="append", dest="entry")
 
     m9_log = subparsers.add_parser("down", help="ending runtime", usage="m9 down <RUNTIME>")
-    m9_log.add_argument("runtime", help="runtime full name")
+    m9_log.add_argument("runtime", help="runtime name", nargs='?',default="default")
 
     m9_log = subparsers.add_parser("log", help="show runtime log", usage="m9 log <RUNTIME>")
-    m9_log.add_argument("runtime", help="runtime full name")
+    m9_log.add_argument("runtime", help="runtime name", nargs='?',default="default")
     m9_log.add_argument("-f", "--follow", help="tail log", action="store_true", dest="follow")
 
     m9_log = subparsers.add_parser("re", help="restart full runtime", usage="m9 re <RUNTIME>")
-    m9_log.add_argument("runtime", help="runtime full name")
+    m9_log.add_argument("runtime", help="runtime name", nargs='?',default="default")
 
     m9_build = subparsers.add_parser("build", help="build with runtime", usage="m9 build <project>|<path> <cmd> ...")
-    m9_build.add_argument("runtime", help="runtime full name")
+    m9_build.add_argument("runtime", help="runtime full name", nargs='?',default="default")
 
     m9_systemd = subparsers.add_parser("sd", help="systemd command sets", usage="m9 sd install|uninstall|enable|disable|start|stop|restart|status <runtime>")
     m9_systemd.add_argument("action", choices=["install", "uninstall", "enable", "disable", "start", "stop", "restart", "status"])
     m9_systemd.add_argument("runtime", nargs="+", help="runtime full name (`all` for every runtime)")
 
     m9_dist = subparsers.add_parser("dist", help="distribute runtime", usage="m9 dist <runtime> --image <DISTIMAGE TAG> -s | -b")
-    m9_dist.add_argument("runtime", help="runtime full name")
+    m9_dist.add_argument("runtime", help="runtime name", nargs='?',default="default")
     m9_dist.add_argument("-i", "--image", help="distribute container image", dest="distimage", required=False)
-    g = m9_dist.add_mutually_exclusive_group(required=True)
-    g.add_argument("-s", help="distribute as source", action="count")
+    g = m9_dist.add_mutually_exclusive_group(required=False)
+    g.add_argument("-s", help="distribute as source (default way)", action="count", default=1)
     g.add_argument("-b", help="distribute as binary", action="count")
 
     m9_deploy = subparsers.add_parser("deploy", help="deploy distribution package", usage="m9 deploy <package> ...")
@@ -544,7 +544,7 @@ def proc(args):
             m9.init(args.runtime, project_path, os.path.basename(project_path), _cmd)
 
         case "up":
-            if IN_PROJECT:
+            if IN_PROJECT and "." not in args.runtime:
                 rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
             else:
                 rfn = args.runtime
@@ -558,7 +558,7 @@ def proc(args):
             m9.up(rfn, rtinfo["project_dir"], _cmd, args.daemon, args.dryrun)
 
         case "log":
-            if IN_PROJECT:
+            if IN_PROJECT and "." not in args.runtime:
                 rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
             else:
                 rfn = args.runtime
@@ -572,7 +572,7 @@ def proc(args):
             m9.log(rfn, rtinfo["project_dir"], _cmd, args.follow)
 
         case "down":
-            if IN_PROJECT:
+            if IN_PROJECT and "." not in args.runtime:
                 rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
             else:
                 rfn = args.runtime
@@ -586,7 +586,7 @@ def proc(args):
             m9.down(rfn, rtinfo["project_dir"], _cmd)
 
         case "re":
-            if IN_PROJECT:
+            if IN_PROJECT and "." not in args.runtime:
                 rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
             else:
                 rfn = args.runtime
@@ -600,7 +600,7 @@ def proc(args):
             m9.re(rfn, rtinfo["project_dir"], _cmd)
 
         case "build":
-            if IN_PROJECT:
+            if IN_PROJECT and "." not in args.runtime:
                 rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
             else:
                 rfn = args.runtime
@@ -620,8 +620,7 @@ def proc(args):
             m9.show(project_path)
 
         case "dist":
-
-            if IN_PROJECT:
+            if IN_PROJECT and "." not in args.runtime:
                 rfn = f"{m9util.load_project_info('.')['project']}.{args.runtime.split('.')[-1]}"
             else:
                 rfn = args.runtime
