@@ -271,6 +271,12 @@ build:
 
 ################################################################################
 
+ifeq ($(M9_RUNTIME), default)
+mkfile = Makefile
+else
+mkfile = Makefile.$(M9_RUNTIME)
+endif
+
 dist:
 	@rm -rf ./dist && mkdir ./dist/
 
@@ -290,7 +296,7 @@ ifdef M9_ARGS_distimage
 	@$(cli) save -o ./dist/$(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar --format oci-archive $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage)
 endif
 	@cp .env ./dist/.env
-	@cp --parents .m9/meta.json .m9/Makefile .m9/project.json ./dist/
+	@cp --parents .m9/meta.json .m9/$(mkfile) .m9/project.json ./dist/
 	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/
 	@cp --parents unit/config.json ./dist/
 	@python -c "import json,datetime;c=open('./dist/.m9/meta.json'); r=json.load(c);c.close(); \
@@ -314,7 +320,7 @@ else
 	@$(cli) tag $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage) $(M9_PROJECT).$(M9_RUNTIME):latest
 endif
 	@cp -vf .env $(M9_ARGS_targetdir) || :
-	@cp -vf --parents .m9/Makefile .m9/project.json $(M9_ARGS_targetdir) || :
+	@cp -vf --parents .m9/$(mkfile) .m9/project.json $(M9_ARGS_targetdir) || :
 	@cp -vf --parents unit/config.json $(M9_ARGS_targetdir) || :
 
 ################################################################################

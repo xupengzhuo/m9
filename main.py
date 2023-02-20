@@ -274,7 +274,7 @@ class m9:
     def build(project, runtime, pth):
         env = dict(os.environ.copy(), **{"M9_RUNTIME": runtime, "M9_PROJECT": project, "M9_RUNTIME_FULLNAME": f"{project}.{runtime}"})
 
-        subprocess.run(args=(runtime, "build"), cwd=pth, env=env)
+        subprocess.run(args=cmd_build(runtime, "build"), cwd=pth, env=env)
 
     def dist(project, runtime, pth, distway, distimage):
         env = dict(os.environ.copy(), **{"M9_RUNTIME": runtime, "M9_PROJECT": project, "M9_RUNTIME_FULLNAME": f"{project}.{runtime}"})
@@ -456,7 +456,7 @@ def parsecli(
     m9_show.add_argument("project", help="project name or path")
 
     m9_list = subparsers.add_parser("list", help="list all", usage="m9 list <p|r|t>")
-    m9_list.add_argument("-t", "--type", help="p: show project, r: show: runtime, t:show template", required=False)
+    m9_list.add_argument("res", help="p: show project, r: show runtime, t:show template", nargs="?", default="prt")
 
     m9_new = subparsers.add_parser("new", help="create a new project in current directory", usage="m9 new <template> <project>")
     m9_new.add_argument("template", help="project template name")
@@ -514,10 +514,10 @@ def proc(args):
                 "t",  # template
                 "r",  # runtime
             }
-            if not args.type:
+            if not args.res:
                 m9.list(["p", "r", "t"])
                 return
-            _args = set(args.type.lower())
+            _args = set(args.res.lower())
             if _args.issubset(m9type):
                 m9.list(list(_args))
             else:
