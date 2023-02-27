@@ -1,3 +1,5 @@
+# template: redissvc
+
 runtime_path = .m9/runtime/$(M9_RUNTIME)
 
 .PHONY : all init up down log dist deploy
