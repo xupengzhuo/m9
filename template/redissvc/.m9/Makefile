@@ -5,7 +5,7 @@ runtime_path = .m9/runtime/$(M9_RUNTIME)
 .PHONY : all init up down log dist deploy
 
 cli = podman
-image = redis:latest
+image = redis:alpine
 
 define IMAGECMD
 FROM $(baseimage)
