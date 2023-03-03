@@ -230,7 +230,7 @@ class m9:
     def init(project, runtime, project_abspath):
         env = dict(os.environ.copy(), **{"M9_RUNTIME": runtime, "M9_PROJECT": project, "M9_RUNTIME_FULLNAME": f"{project}.{runtime}"})
 
-        if not os.path.exists(os.path.join(project_abspath, f".m9/Makefile.{runtime}")):
+        if runtime != "default" and not os.path.exists(os.path.join(project_abspath, f".m9/Makefile.{runtime}")):
             shutil.copyfile(os.path.join(project_abspath, ".m9/Makefile"), os.path.join(project_abspath, f".m9/Makefile.{runtime}"))
 
         subprocess.run(args=cmd_build(runtime, "init"), cwd=project_abspath, env=env)
