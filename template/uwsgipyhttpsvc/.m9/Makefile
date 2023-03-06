@@ -5,7 +5,7 @@ runtime_path = .m9/runtime/$(M9_RUNTIME)
 .PHONY : all init up down log re build dist deploy
 
 cli = podman
-pip_index = https://pypi.tuna.tsinghua.edu.cn/simple
+pip_index = https://mirror.sjtu.edu.cn/pypi/web/simple
 apt_mirror= mirrors.tuna.tsinghua.edu.cn
 image = python:3.10-slim
 image_build = python:3.10

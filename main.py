@@ -286,7 +286,7 @@ class m9:
 
         subprocess.run(args=cmd_build(runtime, "dist"), cwd=pth, env=env)
 
-    def deploy(project, runtime, pack_relpath, distway, distimage, args):
+    def deploy(project, runtime, pack_relpath, distway, distimage):
         env = os.environ.copy()
 
         if not (target_dir := m9util.find_project(project, trypath=False)):  # create project object here
@@ -318,7 +318,7 @@ class m9:
         env["M9_RUNTIME"] = runtime
         env["M9_ARGS_distway"] = distway
         env["M9_ARGS_distimage"] = distimage
-        subprocess.run(args=args, cwd=pack_relpath, env=env)
+        subprocess.run(args=cmd_build(runtime, "dist"), cwd=pack_relpath, env=env)
 
     def list(t):
         col = []
@@ -656,10 +656,7 @@ def proc(args):
             print("package info:")
             [*map(print, pinfo.items())]
 
-            if not (_cmd := m9util.load_project_commad(args.package, "deploy")):
-                return log.error("this project doesn`t supply deploy command")
-
-            m9.deploy(pinfo["project"], pinfo["dist_runtime"], args.package, pinfo["dist_way"], pinfo["dist_image"], _cmd)
+            m9.deploy(pinfo["project"], pinfo["dist_runtime"], args.package, pinfo["dist_way"], pinfo["dist_image"])
 
         case "sd":
             all_runtime = [r.rsplit(".", 1)[0] for r in os.listdir(ABSPATH_RUNTIME)]
