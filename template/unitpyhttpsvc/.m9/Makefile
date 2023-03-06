@@ -83,7 +83,7 @@ RUN set -x \\
     && rm -f /requirements.apt \\
     && ln -sf /dev/stdout /var/log/unit.log \\
     && chmod +x /usr/local/bin/entrypoint.sh \\
-    && pip3 install --index $(pip_index) -r /usr/etc/requirements.txt
+    && pip3 install --index-url $(pip_index) -r /usr/etc/requirements.txt
 STOPSIGNAL SIGTERM
 WORKDIR /usr/src/
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
