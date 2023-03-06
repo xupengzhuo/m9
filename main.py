@@ -634,7 +634,7 @@ def proc(args):
             if "." in args.runtime:
                 if rtinfo := m9util.load_runtime_info(args.runtime):
                     os.chdir(rtinfo["project_dir"])
-                    m9.dist(rtinfo["project"], args.runtime.split(".")[-1], rtinfo["project_dir"])
+                    m9.dist(rtinfo["project"], args.runtime.split(".")[-1], rtinfo["project_dir"], distway, args.distimage)
                     return
             elif IN_PROJECT:
                 if args.runtime == "default" or os.path.exists(os.path.join(".m9/runtime", args.runtime)):
