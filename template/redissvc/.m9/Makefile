@@ -98,6 +98,13 @@ endif
 
 dist:
 	@rm -rf ./dist && mkdir ./dist/
+ifdef M9_ARGS_distimage
+	@echo "FROM localhost/$(M9_PROJECT).$(M9_RUNTIME)" > ./dist/Dockerfile
+	@$(cli) build ./dist/ -t $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage) >/dev/null
+	@echo "image ready: $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage)"
+	@rm -rf ./dist/*
+	@$(cli) save -o ./dist/$(M9_PROJECT).$(M9_RUNTIME).$(M9_ARGS_distimage).tar --format oci-archive $(M9_PROJECT).$(M9_RUNTIME)_distimage:$(M9_ARGS_distimage)
+endif
 	@cp --parents .m9/meta.json .m9/$(mkfile) ./dist/
 	@cp -r --parents .m9/runtime/$(M9_RUNTIME) ./dist/
 	@cp --parents redis.conf ./dist/
