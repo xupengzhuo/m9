@@ -318,7 +318,7 @@ class m9:
         env["M9_RUNTIME"] = runtime
         env["M9_ARGS_distway"] = distway
         env["M9_ARGS_distimage"] = distimage
-        subprocess.run(args=cmd_build(runtime, "dist"), cwd=pack_relpath, env=env)
+        subprocess.run(args=cmd_build(runtime, "deploy"), cwd=pack_relpath, env=env)
 
     def list(t):
         col = []
