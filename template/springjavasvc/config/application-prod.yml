@@ -1,0 +1,38 @@
+upload:
+  file:
+    path:
+org:
+  typeCodeList:
+
+expire:
+  month:
+    outsource:
+    test:
+  date:
+    formal:
+deadsleep:
+  critical:
+    date:
+force:
+  sync:
+    typecodes:
+loadOrgHistory:
+  typeCodeList: 
+
+username:
+  suffix: 
+
+database:
+  0:
+    name:
+    url: 
+    username:
+    password: 
+    driver-class-name:
+    type: 
+    validationQuery: 
+    queryTimeout: 
+    transactionQueryTimeout: 
+    poolPreparedStatements: true
+    maxPoolPreparedStatementPerConnectionSize: 
+
